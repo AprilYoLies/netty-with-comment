@@ -20,7 +20,7 @@ import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-
+// 应该就是一个 selection key 容器
 final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
 
     SelectionKey[] keys;

@@ -77,13 +77,13 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
         super(nThreads, threadFactory, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
     }
 
-    public NioEventLoopGroup(
+    public NioEventLoopGroup( // 指定默认的选择策略工厂
             int nThreads, Executor executor, final SelectorProvider selectorProvider) {
         this(nThreads, executor, selectorProvider, DefaultSelectStrategyFactory.INSTANCE);
     }
 
     public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider selectorProvider,
-                             final SelectStrategyFactory selectStrategyFactory) {
+                             final SelectStrategyFactory selectStrategyFactory) { // 指定拒绝执行处理器
         super(nThreads, executor, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
     }
 

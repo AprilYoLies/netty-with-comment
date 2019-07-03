@@ -27,14 +27,15 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
 
     public static final DefaultEventExecutorChooserFactory INSTANCE = new DefaultEventExecutorChooserFactory();
 
-    private DefaultEventExecutorChooserFactory() { }
+    private DefaultEventExecutorChooserFactory() {
+    }
 
     @SuppressWarnings("unchecked")
     @Override
     public EventExecutorChooser newChooser(EventExecutor[] executors) {
-        if (isPowerOfTwo(executors.length)) {
+        if (isPowerOfTwo(executors.length)) {   // 如果构建的 NioEventLoop 是 2 的幂级数，那么构建的就是 PowerOfTwoEventExecutorChooser
             return new PowerOfTwoEventExecutorChooser(executors);
-        } else {
+        } else {    // 否则构建的就是 GenericEventExecutorChooser
             return new GenericEventExecutorChooser(executors);
         }
     }
@@ -43,6 +44,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         return (val & -val) == val;
     }
 
+    // 选择的逻辑是通过位运算，速度更快
     private static final class PowerOfTwoEventExecutorChooser implements EventExecutorChooser {
         private final AtomicInteger idx = new AtomicInteger();
         private final EventExecutor[] executors;
@@ -52,11 +54,12 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         }
 
         @Override
-        public EventExecutor next() {
+        public EventExecutor next() {   // 逻辑与操作效率更高 比如长度为 2 ^ 3 = 8，那么按位与的结果将一直落在 0 - 7 之间，等价于轮询
             return executors[idx.getAndIncrement() & executors.length - 1];
         }
     }
 
+    // 选择的逻辑就是轮询
     private static final class GenericEventExecutorChooser implements EventExecutorChooser {
         private final AtomicInteger idx = new AtomicInteger();
         private final EventExecutor[] executors;

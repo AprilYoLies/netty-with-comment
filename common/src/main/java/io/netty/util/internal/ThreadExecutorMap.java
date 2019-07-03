@@ -28,7 +28,8 @@ public final class ThreadExecutorMap {
 
     private static final FastThreadLocal<EventExecutor> mappings = new FastThreadLocal<EventExecutor>();
 
-    private ThreadExecutorMap() { }
+    private ThreadExecutorMap() {
+    }
 
     /**
      * Returns the current {@link EventExecutor} that uses the {@link Thread}, or {@code null} if none / unknown.
@@ -47,7 +48,7 @@ public final class ThreadExecutorMap {
     /**
      * Decorate the given {@link Executor} and ensure {@link #currentExecutor()} will return {@code eventExecutor}
      * when called from within the {@link Runnable} during execution.
-     */
+     */ // 创建了一个 executor，它实际调用的是参数 executor 的 executor，同时将 eventExecutor 缓存到了 FastThreadLocal 中
     public static Executor apply(final Executor executor, final EventExecutor eventExecutor) {
         ObjectUtil.checkNotNull(executor, "executor");
         ObjectUtil.checkNotNull(eventExecutor, "eventExecutor");

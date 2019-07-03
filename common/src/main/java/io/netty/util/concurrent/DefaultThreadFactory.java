@@ -59,6 +59,7 @@ public class DefaultThreadFactory implements ThreadFactory {
         this(poolName, false, priority);
     }
 
+    // 非守护线程
     public DefaultThreadFactory(Class<?> poolType, boolean daemon, int priority) {
         this(toPoolName(poolType), daemon, priority);
     }
@@ -99,7 +100,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     public DefaultThreadFactory(String poolName, boolean daemon, int priority) {
-        this(poolName, daemon, priority, System.getSecurityManager() == null ?
+        this(poolName, daemon, priority, System.getSecurityManager() == null ? // 留意这个线程组的获取方式
                 Thread.currentThread().getThreadGroup() : System.getSecurityManager().getThreadGroup());
     }
 

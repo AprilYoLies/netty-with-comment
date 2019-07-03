@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  *
  */
 public abstract class SingleThreadEventExecutor extends AbstractScheduledEventExecutor implements OrderedEventExecutor {
-
+    // 可以挂起的任务，最少为 16
     static final int DEFAULT_MAX_PENDING_EXECUTOR_TASKS = Math.max(16,
             SystemPropertyUtil.getInt("io.netty.eventexecutor.maxPendingTasks", Integer.MAX_VALUE));
 
@@ -73,11 +73,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             // Do nothing.
         }
     };
-
+    // 用于修改 state 属性
     private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "state");
     private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, ThreadProperties> PROPERTIES_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(
+            AtomicReferenceFieldUpdater.newUpdater( // 用于修改 threadProperties 属性
                     SingleThreadEventExecutor.class, ThreadProperties.class, "threadProperties");
 
     private final Queue<Runnable> taskQueue;
@@ -88,8 +88,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final Executor executor;
     private volatile boolean interrupted;
 
-    private final Semaphore threadLock = new Semaphore(0);
-    private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
+    private final Semaphore threadLock = new Semaphore(0);  // 信标量，线程锁
+    private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>(); // 保存关闭钩子函数
     private final boolean addTaskWakesUp;
     private final int maxPendingTasks;
     private final RejectedExecutionHandler rejectedExecutionHandler;
@@ -155,16 +155,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *                          executor thread
      * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
      * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
-     */
+     */ // 缓存了最大挂起任务数，根据此值构建 mpsc 队列，封装了 executor 并缓存，缓存了决绝执行器
     protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor,
                                         boolean addTaskWakesUp, int maxPendingTasks,
                                         RejectedExecutionHandler rejectedHandler) {
-        super(parent);
-        this.addTaskWakesUp = addTaskWakesUp;
-        this.maxPendingTasks = Math.max(16, maxPendingTasks);
-        this.executor = ThreadExecutorMap.apply(executor, this);
-        taskQueue = newTaskQueue(this.maxPendingTasks);
-        rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
+        super(parent);  // 仅仅是保存当前 nio event loop 所属的组信息保存到父类中，完成相关的字段信息的初始化
+        this.addTaskWakesUp = addTaskWakesUp; // 控制量，控制程序的逻辑
+        this.maxPendingTasks = Math.max(16, maxPendingTasks); // 至少的挂起线程数为 16
+        this.executor = ThreadExecutorMap.apply(executor, this); // 创建了一个 executor，它实际调用的是参数 executor 的 executor，同时将 eventExecutor 缓存到了 FastThreadLocal 中
+        taskQueue = newTaskQueue(this.maxPendingTasks); // 对于 NioEventLoop 而言，构建的是多生产者，单消费者队列
+        rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler"); // 决绝执行处理器
     }
 
     /**

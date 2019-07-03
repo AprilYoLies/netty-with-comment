@@ -31,7 +31,7 @@ import java.util.concurrent.ThreadFactory;
  *
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
-
+    // 最大挂起线程数
     protected static final int DEFAULT_MAX_PENDING_TASKS = Math.max(16,
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxPendingTasks", Integer.MAX_VALUE));
 
@@ -56,7 +56,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
                                     boolean addTaskWakesUp, int maxPendingTasks,
                                     RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
-        tailTasks = newTaskQueue(maxPendingTasks);
+        tailTasks = newTaskQueue(maxPendingTasks); // 构建的是多生产者，单消费者队列
     }
 
     @Override

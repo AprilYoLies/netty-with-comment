@@ -42,7 +42,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     protected AbstractEventExecutor() {
         this(null);
     }
-
+    // 保存所述的组信息到父类中
     protected AbstractEventExecutor(EventExecutorGroup parent) {
         this.parent = parent;
     }
