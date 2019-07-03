@@ -32,7 +32,7 @@ public class FlushConsolidationHandlerTest {
     @Test
     public void testFlushViaScheduledTask() {
         final AtomicInteger flushCount = new AtomicInteger();
-        EmbeddedChannel channel = newChannel(flushCount,  true);
+        EmbeddedChannel channel = newChannel(flushCount, true);
         // Flushes should not go through immediately, as they're scheduled as an async task
         channel.flush();
         assertEquals(0, flushCount.get());
