@@ -101,6 +101,7 @@
         <repository>
           <id>staged-releases</id>
           <name>Staged Releases</name>
+          <!--suppress UnresolvedMavenProperty -->
           <url>https://oss.sonatype.org/service/local/repositories/${stagingRepositoryId}/content/</url>
         </repository>
       </repositories>
