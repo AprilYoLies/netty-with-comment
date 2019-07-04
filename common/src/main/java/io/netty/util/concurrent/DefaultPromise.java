@@ -94,7 +94,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         throw new IllegalStateException("complete already: " + this);
     }
 
-    @Override
+    @Override   // 通过 field updater 设置 result 字段，完成后通知注册的监听器
     public boolean trySuccess(V result) {
         return setSuccess0(result);
     }
@@ -121,7 +121,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return !isDone0(result) || !isCancelled0(result);
     }
 
-    @Override
+    @Override // 如果结果不为空，且不为 UNCANCELLABLE 或者是 CauseHolder，就代表 registry 成功了，可以进行 bind 操作了
     public boolean isSuccess() {
         Object result = this.result;
         return result != null && result != UNCANCELLABLE && !(result instanceof CauseHolder);
@@ -403,18 +403,18 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         checkNotNull(listener, "listener");
         notifyListenerWithStackOverFlowProtection(eventExecutor, future, listener);
     }
-
+    // 逐个的通知 listener，如果过程中有新的 listener 被添加进来，也将会被通知到
     private void notifyListeners() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
-            final int stackDepth = threadLocals.futureListenerStackDepth();
+            final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get(); // 获取线程内部的 threadLocalMap
+            final int stackDepth = threadLocals.futureListenerStackDepth(); // threadLocals 的一个字段量
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
-                threadLocals.setFutureListenerStackDepth(stackDepth + 1);
-                try {
+                threadLocals.setFutureListenerStackDepth(stackDepth + 1); // 重新指定 stackDepth
+                try { // 逐个的通知 listener，如果过程中有新的 listener 被添加进来，也将会被通知到
                     notifyListenersNow();
                 } finally {
-                    threadLocals.setFutureListenerStackDepth(stackDepth);
+                    threadLocals.setFutureListenerStackDepth(stackDepth); // 又恢复原深度？？
                 }
                 return;
             }
@@ -457,7 +457,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         });
     }
-
+    // 逐个的通知 listener，如果过程中有新的 listener 被添加进来，也将会被通知到
     private void notifyListenersNow() {
         Object listeners;
         synchronized (this) {
@@ -465,13 +465,13 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             if (notifyingListeners || this.listeners == null) {
                 return;
             }
-            notifyingListeners = true;
+            notifyingListeners = true; // 修改状态量
             listeners = this.listeners;
-            this.listeners = null;
+            this.listeners = null; // 辅助垃圾回收
         }
-        for (; ; ) {
+        for (; ; ) {    // 根据 listener 的不同类型进行对应的通知
             if (listeners instanceof DefaultFutureListeners) {
-                notifyListeners0((DefaultFutureListeners) listeners);
+                notifyListeners0((DefaultFutureListeners) listeners); // 调用监听器事件
             } else {
                 notifyListener0(this, (GenericFutureListener<?>) listeners);
             }
@@ -479,9 +479,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 if (this.listeners == null) {
                     // Nothing can throw from within this method, so setting notifyingListeners back to false does not
                     // need to be in a finally block.
-                    notifyingListeners = false;
+                    notifyingListeners = false; // 修正 notifyingListeners 状态，表示 listener 已经通知完毕
                     return;
-                }
+                } // 执行到这里，说明在通知 listener 的过程中，又有新的 listener 添加进来，所以需要继续通知被新添加的 listener
                 listeners = this.listeners;
                 this.listeners = null;
             }
@@ -496,10 +496,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"unchecked", "rawtypes"}) // 就是直接调用 listener 的 operationComplete 方法
     private static void notifyListener0(Future future, GenericFutureListener l) {
         try {
-            l.operationComplete(future);
+            l.operationComplete(future); // 触发监听事件
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn("An exception was thrown by " + l.getClass().getName() + ".operationComplete()", t);
@@ -525,19 +525,19 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
-    private boolean setSuccess0(V result) {
+    private boolean setSuccess0(V result) { // result 为空就代表成功
         return setValue0(result == null ? SUCCESS : result);
     }
 
     private boolean setFailure0(Throwable cause) {
         return setValue0(new CauseHolder(checkNotNull(cause, "cause")));
     }
-
+    // 通过 field updater 设置 result 字段，完成后通知注册的监听器
     private boolean setValue0(Object objResult) {
-        if (RESULT_UPDATER.compareAndSet(this, null, objResult) ||
+        if (RESULT_UPDATER.compareAndSet(this, null, objResult) || // 如果通过 cas 操作设置字段值成功
                 RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, objResult)) {
-            if (checkNotifyWaiters()) {
-                notifyListeners();
+            if (checkNotifyWaiters()) { // 通知 waiters，listener 不为空的话，继续通知 listener
+                notifyListeners();  // 通知监听器，也就是在设置结果成功后，进行通知
             }
             return true;
         }

@@ -47,11 +47,11 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         return new NioMessageUnsafe();
     }
 
-    @Override
+    @Override // 这个方法实际就是注册了对读事件感兴趣
     protected void doBeginRead() throws Exception {
         if (inputShutdown) {
             return;
-        }
+        }   // 这个方法实际就是注册了对读事件感兴趣
         super.doBeginRead();
     }
 

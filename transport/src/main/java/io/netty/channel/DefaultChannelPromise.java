@@ -53,7 +53,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
         this.channel = checkNotNull(channel, "channel");
     }
 
-    @Override
+    @Override // 获取 executor，如果为空的话，就获取 channel 持有的 executor
     protected EventExecutor executor() {
         EventExecutor e = super.executor();
         if (e == null) {
@@ -79,7 +79,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
         return this;
     }
 
-    @Override
+    @Override   // 通过 field updater 设置 result 字段，完成后通知注册的监听器
     public boolean trySuccess() {
         return trySuccess(null);
     }

@@ -70,16 +70,16 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     @Override // 将 channel 封装成为 DefaultChannelPromise 进行注册
-    public ChannelFuture register(Channel channel) {
-        return register(new DefaultChannelPromise(channel, this));
+    public ChannelFuture register(Channel channel) {    // 原生 channel 注册 selector，完成 handler 的 channelActive 方法的调用，设置结果，进行 listener
+        return register(new DefaultChannelPromise(channel, this));  // 的通知，最后触发 channel registry 事件
     }
 
-    @Override // 当前 channel 持有的 nio 原生 channel 向 selector 进行注册，触发当前 channel 对应的 pipeline 的 PendingHandlerCallback 链，完成 channelInit 方法的调用，然后触发 channel registry 事件
-    public ChannelFuture register(final ChannelPromise promise) {
+    @Override // 当前 channel 持有的 nio 原生 channel 向 selector 进行注册，触发当前 channel 对应的 pipeline 的 PendingHandlerCallback 链，完成 channelInit
+    public ChannelFuture register(final ChannelPromise promise) {   //  方法的调用，然后触发 channel registry 事件
         ObjectUtil.checkNotNull(promise, "promise");
         promise.channel().unsafe().register(this, promise); // promise 持有 channel，channel 持有 unsafe
-        return promise; // 当前 channel 持有的 nio 原生 channel 向 selector 进行注册，触发当前 channel 对应的 pipeline 的 PendingHandlerCallback 链，完成 channelInit 方法的调用，然后触发 channel registry 事件
-    }
+        return promise; // 当前 channel 持有的 nio 原生 channel 向 selector 进行注册，触发当前 channel 对应的 pipeline 的 PendingHandlerCallback 链，
+    }   // 完成 channelInit 方法的调用，设置 registry 的结果，完成 listener 的通知，最后触发 channel registry 事件，
 
     @Deprecated
     @Override

@@ -285,11 +285,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         // 添加在末尾的那个 channel handler），然后触发 channel registry 事件
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
-        if (regFuture.cause() != null) {
+        if (regFuture.cause() != null) { // 如果 init 和 registry 的过程出现错误，直接返回
             return regFuture;
         }
 
-        if (regFuture.isDone()) {
+        if (regFuture.isDone()) { // 如果 result 是已完成状态
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
             doBind0(regFuture, channel, localAddress, promise);
@@ -297,19 +297,19 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
             final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
-            regFuture.addListener(new ChannelFutureListener() {
-                @Override
+            regFuture.addListener(new ChannelFutureListener() { // 为 regFuture 注册了一个监听器，监听 operationComplete 事件
+                @Override   // 正常情况下，该 listener 会设置 promise 的状态，同时进行 bind 操作（原生 channel 绑定 localAddress，触发 channel active 事件，同时注册了对 read 事件感兴趣）
                 public void operationComplete(ChannelFuture future) throws Exception {
                     Throwable cause = future.cause();
                     if (cause != null) {
                         // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
                         // IllegalStateException once we try to access the EventLoop of the Channel.
-                        promise.setFailure(cause);
-                    } else {
+                        promise.setFailure(cause);  // 这里说明 regFuture 的 registry 过程出错
+                    } else { // 执行到这里，说明 registry 完成且是成功的，修改 promise 的状态后进行 bind 操作
                         // Registration was successful, so set the correct executor to use.
                         // See https://github.com/netty/netty/issues/2586
-                        promise.registered();
-
+                        promise.registered(); // 否则修改 promise 状态为 registered
+                        // 原生 channel 绑定 localAddress，触发 channel active 事件，同时注册了对 read 事件感兴趣
                         doBind0(regFuture, channel, localAddress, promise);
                     }
                 }
@@ -359,7 +359,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     abstract void init(Channel channel) throws Exception;
-
+    // 原生 channel 绑定 localAddress，触发 channel active 事件，同时注册了对 read 事件感兴趣
     private static void doBind0(
             final ChannelFuture regFuture, final Channel channel,
             final SocketAddress localAddress, final ChannelPromise promise) {
@@ -369,9 +369,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         channel.eventLoop().execute(new Runnable() {
             @Override
             public void run() {
-                if (regFuture.isSuccess()) {
-                    channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-                } else {
+                if (regFuture.isSuccess()) {  // 如果结果不为空，且不为 UNCANCELLABLE 或者是 CauseHolder，就代表 registry 成功了，可以进行 bind 操作了
+                    channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);// 添加一个监听器，用于监听 channel bind 的状态
+                } else { // bind 方法原生 channel 绑定 localAddress，触发 channel active 事件，同时注册了对 read 事件感兴趣
                     promise.setFailure(regFuture.cause());
                 }
             }

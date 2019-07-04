@@ -254,7 +254,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return this;
     }
 
-    @Override
+    @Override // channel 的 bind 操作也是从 pipeline 开始的
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
         return pipeline.bind(localAddress, promise);
     }
@@ -485,9 +485,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 try {
                     eventLoop.execute(new Runnable() {
                         @Override
-                        public void run() {
-                            register0(promise);
-                        }   // 当前 channel 持有的 nio 原生 channel 向 selector 进行注册，触发当前 channel 对应的 pipeline 的 PendingHandlerCallback 链，完成 channelInit 方法的调用，然后触发 channel registry 事件
+                        public void run() {  // 当前 channel 持有的 nio 原生 channel 向 selector 进行注册，触发当前 channel 对应的 pipeline
+                            register0(promise); // 的 PendingHandlerCallback 链，完成 channelInit 方法的调用，然后设置 result，同时完成对于 listener
+                        }   // 的通知操作，最后触发 channel registry 事件
                     });
                 } catch (Throwable t) {
                     logger.warn(
@@ -516,7 +516,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // user may already fire events through the pipeline in the ChannelFutureListener.
                 pipeline.invokeHandlerAddedIfNeeded();  // 根据 firstRegistration 状态来决定是否调用 PendingHandlerCallback 链的 execute 方法
                 // 这里可以看出 channelRegistered 事件触发的流程 pipeline.fireChannelRegistered -> AbstractChannelHandlerContext.invokeChannelRegistered(head) -> head.invokeChannelRegistered() -> handler.channelRegistered(this) -> head.fireChannelRegistered()（下一个 handler context）
-                safeSetSuccess(promise);
+                safeSetSuccess(promise); // 通过 field updater 设置 result 字段，完成后通知注册的监听器
                 pipeline.fireChannelRegistered();   // pipeline 触发 channel registered 事件，这里可以看出来，所有的事件消息都是沿着 pipeline 进行传播的
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
@@ -538,18 +538,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 safeSetFailure(promise, t);
             }
         }
-
-        @Override
+        // 进行了一些验证，比如是否是 event loop 线程，promise 的状态是否正确，channel 是否激活态，然后进行绑定，最后还会提交一个 channel 激活的任务
+        @Override // 该任务触发 channel active 事件，同时向 nio 原生 channel 注册了 read 事件感兴趣
         public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
-            assertEventLoop();
+            assertEventLoop();  // 断言当前线程一定是 event loop 线程
 
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
-                return;
+                return; // 这里是 promise 和 channel 的一些状态信息的判断
             }
 
             // See: https://github.com/netty/netty/issues/576
             if (Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
-                    localAddress instanceof InetSocketAddress &&
+                    localAddress instanceof InetSocketAddress && // channel 被设置为 SO_BROADCAST，但不是绑定的通配地址，同时是 linux 平台却不是超级用户
                     !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress() &&
                     !PlatformDependent.isWindows() && !PlatformDependent.maybeSuperUser()) {
                 // Warn a user about the fact that a non-root user can't receive a
@@ -560,8 +560,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                                 "address (" + localAddress + ") anyway as requested.");
             }
 
-            boolean wasActive = isActive();
-            try {
+            boolean wasActive = isActive(); // 验证当前 channel 为激活状态
+            try { // 调用 nio 的原生 channel 进行绑定
                 doBind(localAddress);
             } catch (Throwable t) {
                 safeSetFailure(promise, t);
@@ -570,14 +570,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             if (!wasActive && isActive()) {
-                invokeLater(new Runnable() {
+                invokeLater(new Runnable() {    // 提交一个 channel 激活的任务，所以这里是 netty 的第二个被触发的事件，第一个是 registry 事件
                     @Override
-                    public void run() {
-                        pipeline.fireChannelActive();
+                    public void run() { // 主要是出发了 channel active 事件，同时设置了 nio 原生 channel 对 read 事件感兴趣
+                        pipeline.fireChannelActive(); // 此事件会传递给 ServerBootstrapAcceptor 处理
                     }
                 });
             }
-
+            // 设置 promise 的结果状态
             safeSetSuccess(promise);
         }
 
@@ -694,13 +694,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private void close(final ChannelPromise promise, final Throwable cause,
                            final ClosedChannelException closeCause, final boolean notify) {
             if (!promise.setUncancellable()) {
-                return;
+                return; // 执行到这里，说明 promise 的状态已经是被设置
             }
 
             if (closeInitiated) {
                 if (closeFuture.isDone()) {
                     // Closed already.
-                    safeSetSuccess(promise);
+                    safeSetSuccess(promise); // 设置 close 的过程已经完成
                 } else if (!(promise instanceof VoidChannelPromise)) { // Only needed if no VoidChannelPromise.
                     // This means close() was called before so we just register a listener and return
                     closeFuture.addListener(new ChannelFutureListener() {
@@ -843,20 +843,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             });
         }
 
-        @Override
+        @Override // 这个方法主要是 nio 原生 channel 注册了对读事件感兴趣
         public final void beginRead() {
-            assertEventLoop();
+            assertEventLoop(); // 断言当前线程就是 event loop 线程
 
             if (!isActive()) {
                 return;
             }
 
-            try {
+            try {   // 这个方法实际就是注册了对读事件感兴趣
                 doBeginRead();
             } catch (final Exception e) {
                 invokeLater(new Runnable() {
                     @Override
-                    public void run() {
+                    public void run() { // 如果这个过程出现异常，就通过 pipeline 触发一个异常事件在 pipeline 中进行传播
                         pipeline.fireExceptionCaught(e);
                     }
                 });
@@ -1008,7 +1008,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         /**
          * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
-         */
+         */ // promise.trySuccess 方法通过 field updater 设置 result 字段，完成后通知注册的监听器
         protected final void safeSetSuccess(ChannelPromise promise) {
             if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
                 logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
@@ -1023,14 +1023,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
             }
         }
-
+        // 如果 channel 的状态不是 open，那么需要
         protected final void closeIfClosed() {
             if (isOpen()) {
                 return;
             }
             close(voidPromise());
         }
-
+        // 这里就是将 task 提交到 eventLoop 中去执行，也就是当前线程
         private void invokeLater(Runnable task) {
             try {
                 // This method is used by outbound operation implementations to trigger an inbound event later.

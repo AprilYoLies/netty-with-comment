@@ -203,7 +203,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private void invokeChannelActive() {
-        if (invokeHandler()) {
+        if (invokeHandler()) { // 检查 handler 的状态是 ADD_COMPLETE 或者是 ADD_PENDING 状态
             try {
                 ((ChannelInboundHandler) handler()).channelActive(this);
             } catch (Throwable t) {
@@ -460,15 +460,15 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise, false)) { // 判断 promise 是否是有效的
             // cancelled
             return promise;
         }
-
+        // 寻找下一个 outbound channel handler context
         final AbstractChannelHandlerContext next = findContextOutbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeBind(localAddress, promise);
+            next.invokeBind(localAddress, promise); // 调用下一个 handler context 的 invoke bind 方法
         } else {
             safeExecute(executor, new Runnable() {
                 @Override
@@ -479,10 +479,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
         return promise;
     }
-
+    // 进行 bind 操作，原生 channel 绑定 localAddress，触发 channel active 事件，同时注册了对 read 事件感兴趣
     private void invokeBind(SocketAddress localAddress, ChannelPromise promise) {
-        if (invokeHandler()) {
-            try {
+        if (invokeHandler()) { // 检查 handler 的状态是 ADD_COMPLETE 或者是 ADD_PENDING 状态
+            try {   // 这里真正的逻辑还是由 HeadHandler 来处理的，bind 方法主要是原生 channel 绑定 localAddress，触发 channel active 事件，同时注册了对 read 事件感兴趣
                 ((ChannelOutboundHandler) handler()).bind(this, localAddress, promise);
             } catch (Throwable t) {
                 notifyOutboundHandlerException(t, promise);
@@ -861,13 +861,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     public ChannelFuture newFailedFuture(Throwable cause) {
         return new FailedChannelFuture(channel(), executor(), cause);
     }
-
+    // 此 promise 是被曝光的那个 promise
     private boolean isNotValidPromise(ChannelPromise promise, boolean allowVoidPromise) {
-        if (promise == null) {
+        if (promise == null) { // promise 不能为空
             throw new NullPointerException("promise");
         }
 
-        if (promise.isDone()) {
+        if (promise.isDone()) { // promise 的状态不能是已完成且是被取消状态
             // Check if the promise was cancelled and if so signal that the processing of the operation
             // should not be performed.
             //
@@ -877,16 +877,16 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             }
             throw new IllegalArgumentException("promise already done: " + promise);
         }
-
+        // 两个 channel 必须是一致的
         if (promise.channel() != channel()) {
             throw new IllegalArgumentException(String.format(
                     "promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
         }
-
+        // 不能是 DefaultChannelPromise
         if (promise.getClass() == DefaultChannelPromise.class) {
             return false;
         }
-
+        // VoidChannelPromise 的判断
         if (!allowVoidPromise && promise instanceof VoidChannelPromise) {
             throw new IllegalArgumentException(
                     StringUtil.simpleClassName(VoidChannelPromise.class) + " not allowed for this operation");

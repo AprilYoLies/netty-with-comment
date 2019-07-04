@@ -405,10 +405,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         eventLoop().cancel(selectionKey());
     }
 
-    @Override
+    @Override   // 所以这个方法实际就是注册了对读事件感兴趣
     protected void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
-        final SelectionKey selectionKey = this.selectionKey;
+        final SelectionKey selectionKey = this.selectionKey; // 此 selectionKey 就是 nio 远程 channel 注册 selector 返回的
         if (!selectionKey.isValid()) {
             return;
         }
@@ -416,7 +416,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         readPending = true;
 
         final int interestOps = selectionKey.interestOps();
-        if ((interestOps & readInterestOp) == 0) {
+        if ((interestOps & readInterestOp) == 0) {  // 注册对 read 事件感兴趣
             selectionKey.interestOps(interestOps | readInterestOp);
         }
     }

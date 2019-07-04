@@ -64,7 +64,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         }
         return slowThreadLocalMap.get();
     }
-
+    // 根据线程类型的不同，获取对应的 InternalThreadLocalMap
     public static InternalThreadLocalMap get() {
         Thread thread = Thread.currentThread();
         if (thread instanceof FastThreadLocalThread) {
@@ -73,18 +73,18 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
             return slowGet();
         }
     }
-
+    // 就是直接获 FastThreadLocalThread 的 threadLocalMap 属性
     private static InternalThreadLocalMap fastGet(FastThreadLocalThread thread) {
-        InternalThreadLocalMap threadLocalMap = thread.threadLocalMap();
-        if (threadLocalMap == null) {
+        InternalThreadLocalMap threadLocalMap = thread.threadLocalMap(); // 获取线程内部的 threadLocalMap
+        if (threadLocalMap == null) { // 没有的话就创建
             thread.setThreadLocalMap(threadLocalMap = new InternalThreadLocalMap());
         }
         return threadLocalMap;
     }
-
-    private static InternalThreadLocalMap slowGet() {
+    // 其实感觉出来 fastGet 相对于 slow get 快在哪儿
+    private static InternalThreadLocalMap slowGet() { // 获取 thread local 变量
         ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = UnpaddedInternalThreadLocalMap.slowThreadLocalMap;
-        InternalThreadLocalMap ret = slowThreadLocalMap.get();
+        InternalThreadLocalMap ret = slowThreadLocalMap.get();  // 其实也就是一个获取线程本地变量的过程
         if (ret == null) {
             ret = new InternalThreadLocalMap();
             slowThreadLocalMap.set(ret);

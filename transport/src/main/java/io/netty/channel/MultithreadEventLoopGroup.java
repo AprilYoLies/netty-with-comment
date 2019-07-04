@@ -81,7 +81,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     @Override
     protected abstract EventLoop newChild(Executor executor, Object... args) throws Exception;
 
-    @Override // 当前 channel 持有的 nio 原生 channel 向 selector 进行注册，触发当前 channel 对应的 pipeline 的 PendingHandlerCallback 链，完成 channelInit 方法的调用，然后触发 channel registry 事件
+    @Override // 原生 channel 注册 selector，完成 handler 的 channelActive 方法的调用，设置结果，进行 listener 的通知，最后触发 channel registry 事件
     public ChannelFuture register(Channel channel) {
         return next().register(channel);
     }

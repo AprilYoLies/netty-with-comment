@@ -901,7 +901,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @Override
+    @Override   // 这里可以看到 channel 激活事件是从 head 节点传播的
     public final ChannelPipeline fireChannelActive() {
         AbstractChannelHandlerContext.invokeChannelActive(head);
         return this;
@@ -979,7 +979,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
-    @Override
+    @Override // 从这里可以看出来，bind 操作是从 tail 节点开始的
     public final ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
         return tail.bind(localAddress, promise);
     }
@@ -1010,7 +1010,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return tail.deregister(promise);
     }
 
-    @Override
+    @Override // read 操作是从 tail 节点触发的
     public final ChannelPipeline read() {
         tail.read();
         return this;
@@ -1327,9 +1327,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void bind(
+        public void bind( // 这里的 unsafe 是由 channel 所持有的
                 ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-            unsafe.bind(localAddress, promise);
+            unsafe.bind(localAddress, promise); // 原生 channel 绑定 localAddress，触发 channel active 事件，同时注册了对 read 事件感兴趣
         }
 
         @Override
@@ -1357,7 +1357,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void read(ChannelHandlerContext ctx) {
-            unsafe.beginRead();
+            unsafe.beginRead(); // 这个方法主要是 nio 原生 channel 注册了对读事件感兴趣
         }
 
         @Override
@@ -1394,7 +1394,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             ctx.fireChannelActive();
-
+            // 这个方法最终主要是 nio 原生 channel 注册了对读事件感兴趣
             readIfIsAutoRead();
         }
 
@@ -1414,7 +1414,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             readIfIsAutoRead();
         }
-
+        // 如果 channel 别设置为 auto read，那么就调用 channel 的 read 方法
         private void readIfIsAutoRead() {
             if (channel.config().isAutoRead()) {
                 channel.read();
