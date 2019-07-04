@@ -75,7 +75,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
     private Tasks invokeTasks;
-
+    // 记录 handler 的状态
     private volatile int handlerState = INIT;
 
     AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor, String name,
@@ -104,7 +104,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return channel().config().getAllocator();
     }
 
-    @Override
+    @Override // 所以 header handler context 内部也就是使用的 channel 的 event loop
     public EventExecutor executor() {
         if (executor == null) {
             return channel().eventLoop();
@@ -123,11 +123,11 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         invokeChannelRegistered(findContextInbound());
         return this;
     }
-
+    // 这是个 static 方法，可以将 AbstractChannelHandlerContext 理解为一个工具类，用于触发各种事件
     static void invokeChannelRegistered(final AbstractChannelHandlerContext next) {
-        EventExecutor executor = next.executor();
+        EventExecutor executor = next.executor(); // 获取 header 的 executor（实际就是获取的 channel 的 executor）
         if (executor.inEventLoop()) {
-            next.invokeChannelRegistered();
+            next.invokeChannelRegistered(); // 触发 registered 事件
         } else {
             executor.execute(new Runnable() {
                 @Override
@@ -139,8 +139,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private void invokeChannelRegistered() {
-        if (invokeHandler()) {
-            try {
+        if (invokeHandler()) { // 检查 handler 的状态是 ADD_COMPLETE 或者是 ADD_PENDING 状态
+            try {   // channelRegistered 方法只有 ChannelInboundHandler 存在
                 ((ChannelInboundHandler) handler()).channelRegistered(this);
             } catch (Throwable t) {
                 notifyHandlerException(t);
@@ -898,7 +898,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
         return false;
     }
-
+    // 查找下一个 InboundChannelHandler
     private AbstractChannelHandlerContext findContextInbound() {
         AbstractChannelHandlerContext ctx = this;
         do {
@@ -923,32 +923,32 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     final void setRemoved() {
         handlerState = REMOVE_COMPLETE;
     }
-
+    // 检查 handler 的状态，非 remove 状态下，就将其设置为 ADD_COMPLETE
     final boolean setAddComplete() {
         for (;;) {
             int oldState = handlerState;
-            if (oldState == REMOVE_COMPLETE) {
+            if (oldState == REMOVE_COMPLETE) { // 如果 handle 的状态是 REMOVE_COMPLETE，返回 false
                 return false;
             }
             // Ensure we never update when the handlerState is REMOVE_COMPLETE already.
             // oldState is usually ADD_PENDING but can also be REMOVE_COMPLETE when an EventExecutor is used that is not
             // exposing ordering guarantees.
-            if (HANDLER_STATE_UPDATER.compareAndSet(this, oldState, ADD_COMPLETE)) {
+            if (HANDLER_STATE_UPDATER.compareAndSet(this, oldState, ADD_COMPLETE)) {    // 否则 cas 操作将 handler 状态修改为 ADD_COMPLETE
                 return true;
             }
         }
     }
-
+    // 修改 handlerState 的状态，是通过 AtomicXxxFieldUpdater 来进行设置的，能够保证操作只会被执行一次
     final void setAddPending() {
         boolean updated = HANDLER_STATE_UPDATER.compareAndSet(this, INIT, ADD_PENDING);
         assert updated; // This should always be true as it MUST be called before setAddComplete() or setRemoved().
     }
-
+    // 获取 context 持有的 handler，调用 handler 的 handlerAdded 方法，根本是调用 channelInit 方法
     final void callHandlerAdded() throws Exception {
         // We must call setAddComplete before calling handlerAdded. Otherwise if the handlerAdded method generates
         // any pipeline events ctx.handler() will miss them because the state will not allow it.
-        if (setAddComplete()) {
-            handler().handlerAdded(this);
+        if (setAddComplete()) {     // 检查 handler 的状态，非 remove 状态下，就将其设置为 ADD_COMPLETE
+            handler().handlerAdded(this); // 调用 handler 的 handlerAdded 方法
         }
     }
 
@@ -971,7 +971,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
      * If this method returns {@code false} we will not invoke the {@link ChannelHandler} but just forward the event.
      * This is needed as {@link DefaultChannelPipeline} may already put the {@link ChannelHandler} in the linked-list
      * but not called {@link ChannelHandler#handlerAdded(ChannelHandlerContext)}.
-     */
+     */ // 检查 handler 的状态是 ADD_COMPLETE 或者是 ADD_PENDING 状态
     private boolean invokeHandler() {
         // Store in local variable to reduce volatile reads.
         int handlerState = this.handlerState;

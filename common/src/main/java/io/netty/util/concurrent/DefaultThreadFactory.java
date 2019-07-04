@@ -83,7 +83,7 @@ public class DefaultThreadFactory implements ThreadFactory {
                 }
         }
     }
-
+    // 默认线程工厂生产出来的线程名前缀为 globalEventExecutor-1-，数字带包第几个线程工厂，也可对应第几个线程池（如果是一一对应的情况）
     public DefaultThreadFactory(String poolName, boolean daemon, int priority, ThreadGroup threadGroup) {
         if (poolName == null) {
             throw new NullPointerException("poolName");
@@ -92,7 +92,7 @@ public class DefaultThreadFactory implements ThreadFactory {
             throw new IllegalArgumentException(
                     "priority: " + priority + " (expected: Thread.MIN_PRIORITY <= priority <= Thread.MAX_PRIORITY)");
         }
-
+        // globalEventExecutor-1-
         prefix = poolName + '-' + poolId.incrementAndGet() + '-';
         this.daemon = daemon;
         this.priority = priority;

@@ -54,7 +54,7 @@ public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>,
 
     /**
      * Returns the configured {@link ChannelHandler} or {@code null} if non is configured yet.
-     */
+     */ // ServerBootstrapConfig 持有了 ServerBootStrap，这里就是获取 ServerBootStrap 中的 handler
     public final ChannelHandler handler() {
         return bootstrap.handler();
     }

@@ -279,6 +279,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        // 看方法名就知道主要是两个部分，init 用相应的 ChannelFactory 构建 channel，然后对其进行相应的设置，主要是添加属性和 pipeline
+        // 添加 channel initializer，然后在 channel 末尾添加了 一个 channel handler，register 部分中，当前 channel 持有的 nio 原生 channel
+        // 向 selector 进行注册，触发当前 channel 对应的 pipeline 的 PendingHandlerCallback 链，完成 channelInit 方法的调用（即 init 部分中
+        // 添加在末尾的那个 channel handler），然后触发 channel registry 事件
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
@@ -313,12 +317,15 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return promise;
         }
     }
-
+    // 看方法名就知道主要是两个部分，init 用相应的 ChannelFactory 构建 channel，然后对其进行相应的设置，主要是添加属性和 pipeline
+    // 添加 channel initializer，然后在 channel 末尾添加了 一个 channel handler，register 部分中，当前 channel 持有的 nio 原生 channel
+    // 向 selector 进行注册，触发当前 channel 对应的 pipeline 的 PendingHandlerCallback 链，完成 channelInit 方法的调用（即 init 部分中
+    // 添加在末尾的那个 channel handler），然后触发 channel registry 事件
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {   // 根据相应的 channel factory 构建 channel
             channel = channelFactory.newChannel();
-            init(channel);
+            init(channel);  // 该方法主要是根据父类中的 option 和 attr 进行了一些设置，然后又为 server socket channel 添加了一个 ChannelInitializer（它的 channelInit 方法将会在后边适合的地方调用）
         } catch (Throwable t) {
             if (channel != null) {
                 // channel can be null if newChannel crashed (eg SocketException("too many open files"))
@@ -329,9 +336,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
-
-        ChannelFuture regFuture = config().group().register(channel);
-        if (regFuture.cause() != null) {
+        // 这一条主要是获取 server bootstrap 的 config，它持有了 server bootstrap，然后获取 server bootstrap 的 event loop group，从中获取一个 event loop，注册 channel
+        ChannelFuture regFuture = config().group().register(channel); // 当前 channel 持有的 nio 原生 channel 向 selector 进行注册，触发当前 channel 对应的 pipeline 的 PendingHandlerCallback 链，完成 channelInit 方法的调用，然后触发 channel registry 事件
+        if (regFuture.cause() != null) { // 这里说明注册发生失败，需要对 channel 进行关闭操作
             if (channel.isRegistered()) {
                 channel.close();
             } else {

@@ -128,7 +128,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     /**
      * Set the {@link ChannelHandler} which is used to serve the request for the {@link Channel}'s.
-     */
+     */ // 此方法可以为子 channel 指定 channel handler
     public ServerBootstrap childHandler(ChannelHandler childHandler) {
         if (childHandler == null) {
             throw new NullPointerException("childHandler");
@@ -137,7 +137,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         return this;
     }
 
-    @Override // 这里可以看出 option 是 channel 的设置，attr 是一些属性值
+    // 该方法主要是根据父类中的 option 和 attr 进行了一些设置，然后又为 server socket channel 添加了一个 ChannelInitializer
+    @Override
+    // 这里可以看出 option 是 channel 的设置，attr 是一些属性值
     void init(Channel channel) throws Exception {
         final Map<ChannelOption<?>, Object> options = options0(); // 父类中的 channel option
         synchronized (options) { // 获取 NioServerSocketChannel 持有的 nio 原生 channel，从中拿到 channel socket 设置 option
@@ -152,7 +154,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 channel.attr(key).set(e.getValue()); // 这里 channel 继承自 DefaultAttributeMap，所以保存在 DefaultAttributeMap 中
             }
         }
-
+        // 这里说明 NioServerSocketChannel 持有了一个 channel pipeline
         ChannelPipeline p = channel.pipeline();
 
         final EventLoopGroup currentChildGroup = childGroup;
@@ -164,21 +166,21 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         }
         synchronized (childAttrs) {
             currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
-        }
-
+        } // 将 handler 封装为 handler context 加入 pipeline，构建 PendingHandlerCallback 封装了 AbstractChannelHandlerContext 以便后续调用初始化
+        // 在 channel pipeline 最后添加了一个 ChannelInitializer，netty 会在 channel 注册后触发对该 handler 的 handlerAdded 方法的调用，根本是调用了 initChannel
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(final Channel ch) throws Exception {
                 final ChannelPipeline pipeline = ch.pipeline();
                 ChannelHandler handler = config.handler();
-                if (handler != null) {
+                if (handler != null) {  // 如果为父 channel 制定过 handler，那么就添加到 pipeline 的末尾
                     pipeline.addLast(handler);
                 }
-
+                // 异步的为父 channel 的 pipeline 添加一个 channel handler，类型为 ServerBootstrapAcceptor，可能是针对子 channel 进行处理，所以参数全是跟 child 相关的
                 ch.eventLoop().execute(new Runnable() {
                     @Override
-                    public void run() {
-                        pipeline.addLast(new ServerBootstrapAcceptor(
+                    public void run() { // 需要留意这个 channel handler
+                        pipeline.addLast(new ServerBootstrapAcceptor( // 包括 child group，子 channel handler，子 options 和子 attrs
                                 ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
                     }
                 });

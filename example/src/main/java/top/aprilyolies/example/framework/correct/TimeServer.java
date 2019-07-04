@@ -45,7 +45,7 @@ public class TimeServer {
                     .channel(NioServerSocketChannel.class)
                     // 将 option 缓存到父类的 option map 中
                     .option(ChannelOption.SO_BACKLOG, 1024)
-                    // 缓存了 child channel handler
+                    // 缓存了 child channel handler，注意这是 child channel handler
                     .childHandler(new ChildChannelHandler());
             // 绑定端口，同步等待成功
             ChannelFuture f = b.bind(port).sync();
