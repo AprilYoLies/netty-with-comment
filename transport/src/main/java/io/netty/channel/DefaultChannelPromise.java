@@ -56,7 +56,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
     @Override // 获取 executor，如果为空的话，就获取 channel 持有的 executor
     protected EventExecutor executor() {
         EventExecutor e = super.executor();
-        if (e == null) {
+        if (e == null) {    // 没有缓存过 executor 就获取 channel 的 event loop
             return channel().eventLoop();
         } else {
             return e;
@@ -126,7 +126,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
         return this;
     }
 
-    @Override
+    @Override // 检查死锁的可能，如果 promise 未完成，就阻塞等待当前线程
     public ChannelPromise await() throws InterruptedException {
         super.await();
         return this;
@@ -153,10 +153,10 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
         return this;
     }
 
-    @Override
+    @Override   // 死锁的条件是调用 sync 方法的线程和当前类持有的 event loop 是相同的线程
     protected void checkDeadLock() {
-        if (channel().isRegistered()) {
-            super.checkDeadLock();
+        if (channel().isRegistered()) { // 只有 channel 注册后才进行死锁检查
+            super.checkDeadLock();  // 死锁的条件是调用 sync 方法的线程和当前类持有的 event loop 是相同的线程
         }
     }
 

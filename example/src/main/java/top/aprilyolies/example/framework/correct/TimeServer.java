@@ -48,7 +48,7 @@ public class TimeServer {
                     // 缓存了 child channel handler，注意这是 child channel handler
                     .childHandler(new ChildChannelHandler());
             // 绑定端口，同步等待成功
-            ChannelFuture f = b.bind(port).sync();
+            ChannelFuture f = b.bind(port).sync(); // 这个 sync 的方法就是用于等待 bind 结果的完成
 
             // 等待服务端监听端口关闭
             f.channel().closeFuture().sync();

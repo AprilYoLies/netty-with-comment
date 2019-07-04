@@ -479,7 +479,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             .append('(').append(config()).append(')');
         return buf.toString();
     }
-
+    // bind 方法实际返回的是 PendingRegistrationPromise
     static final class PendingRegistrationPromise extends DefaultChannelPromise {
 
         // Is set to the correct EventExecutor once the registration was successful. Otherwise it will
@@ -503,7 +503,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
                 return super.executor();
             }
             // The registration failed so we can only use the GlobalEventExecutor as last resort to notify.
-            return GlobalEventExecutor.INSTANCE;
+            return GlobalEventExecutor.INSTANCE; // 没有注册过就返回全局的 executor
         }
     }
 }

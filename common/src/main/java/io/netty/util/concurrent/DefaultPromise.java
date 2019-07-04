@@ -200,25 +200,25 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return this;
     }
 
-    @Override
+    @Override // 检查死锁的可能，如果 promise 未完成，就阻塞等待当前线程
     public Promise<V> await() throws InterruptedException {
-        if (isDone()) {
+        if (isDone()) { // 结果是否已经完成
             return this;
         }
 
-        if (Thread.interrupted()) {
+        if (Thread.interrupted()) { // 如果当前线程中断标志被设置
             throw new InterruptedException(toString());
         }
-
+        // 死锁的条件是调用 sync 方法（当前线程）的线程和当前类持有的 event loop 是相同的线程
         checkDeadLock();
 
         synchronized (this) {
             while (!isDone()) {
-                incWaiters();
+                incWaiters();   // 递增 waiters，上限后抛异常
                 try {
-                    wait();
+                    wait(); // 阻塞当前线程
                 } finally {
-                    decWaiters();
+                    decWaiters(); // 释放 waiters 的个数
                 }
             }
         }
@@ -316,15 +316,15 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return isCancelled0(result);
     }
 
-    @Override
+    @Override   // 结果是否已经完成
     public boolean isDone() {
         return isDone0(result);
     }
 
     @Override
     public Promise<V> sync() throws InterruptedException {
-        await();
-        rethrowIfFailed();
+        await(); // 检查死锁的可能，如果 promise 未完成，就阻塞等待当前线程
+        rethrowIfFailed();  // 如果产生了异常，再抛出即可
         return this;
     }
 
@@ -378,9 +378,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     protected EventExecutor executor() {
         return executor;
     }
-
+    // 死锁的条件是调用 sync 方法的线程和当前类持有的 event loop 是相同的线程
     protected void checkDeadLock() {
-        EventExecutor e = executor();
+        EventExecutor e = executor();   // 事件执行器
         if (e != null && e.inEventLoop()) {
             throw new BlockingOperationException(toString());
         }
@@ -555,7 +555,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
         return listeners != null;
     }
-
+    // 递增 waiters
     private void incWaiters() {
         if (waiters == Short.MAX_VALUE) {
             throw new IllegalStateException("too many waiters: " + this);
@@ -566,7 +566,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private void decWaiters() {
         --waiters;
     }
-
+    // 如果产生了异常，再抛出即可
     private void rethrowIfFailed() {
         Throwable cause = cause();
         if (cause == null) {
@@ -751,7 +751,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static boolean isCancelled0(Object result) {
         return result instanceof CauseHolder && ((CauseHolder) result).cause instanceof CancellationException;
     }
-
+    // result 不为空，且不为 UNCANCELLABLE
     private static boolean isDone0(Object result) {
         return result != null && result != UNCANCELLABLE;
     }
