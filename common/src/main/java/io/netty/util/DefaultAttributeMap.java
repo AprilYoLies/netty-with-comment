@@ -30,7 +30,7 @@ public class DefaultAttributeMap implements AttributeMap {
             AtomicReferenceFieldUpdater.newUpdater(DefaultAttributeMap.class, AtomicReferenceArray.class, "attributes");
 
     private static final int BUCKET_SIZE = 4;
-    private static final int MASK = BUCKET_SIZE  - 1;
+    private static final int MASK = BUCKET_SIZE - 1;
 
     // Initialize lazily to reduce memory consumption; updated by AtomicReferenceFieldUpdater above.
     @SuppressWarnings("UnusedDeclaration")
@@ -41,37 +41,37 @@ public class DefaultAttributeMap implements AttributeMap {
     public <T> Attribute<T> attr(AttributeKey<T> key) {
         if (key == null) {
             throw new NullPointerException("key");
-        }
+        } // 内部是一个 AtomicReferenceArray，如果为空，进行初始化，cas 操作，保证只会有一个能完成设置，其他的就是使用这个被设置的 attributes
         AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
-        if (attributes == null) {
+        if (attributes == null) { // 原子引用数组，如果为空就进行构建
             // Not using ConcurrentHashMap due to high memory consumption.
             attributes = new AtomicReferenceArray<DefaultAttribute<?>>(BUCKET_SIZE);
-
+            // 通过 updater 的 cas 操作，将 attributes 填充到当前实例的 attributes 字段中，只有一个能操作成功，其它的只能是获取已设置的 attributes
             if (!updater.compareAndSet(this, null, attributes)) {
                 attributes = this.attributes;
             }
         }
 
-        int i = index(key);
-        DefaultAttribute<?> head = attributes.get(i);
+        int i = index(key); // 根据 key 计算所引获取 DefaultAttribute
+        DefaultAttribute<?> head = attributes.get(i); // 算是定位到哪个桶？？
         if (head == null) {
             // No head exists yet which means we may be able to add the attribute without synchronization and just
             // use compare and set. At worst we need to fallback to synchronization and waste two allocations.
-            head = new DefaultAttribute();
+            head = new DefaultAttribute(); // attr（DefaultAttribute） 持有 DefaultAttribute 和 key，算是一个哨兵节点
             DefaultAttribute<T> attr = new DefaultAttribute<T>(head, key);
             head.next = attr;
             attr.prev = head;
-            if (attributes.compareAndSet(i, null, head)) {
+            if (attributes.compareAndSet(i, null, head)) {  // 如果 cas 操作成功，返回
                 // we were able to add it so return the attr right away
                 return attr;
-            } else {
+            } else {    // 这里说明有其他线程完成了 attributes 位置 i 的占用，那么就获取这个位置的哨兵节点
                 head = attributes.get(i);
             }
         }
 
         synchronized (head) {
-            DefaultAttribute<?> curr = head;
-            for (;;) {
+            DefaultAttribute<?> curr = head; // 这里是哨兵节点，其实就是一个查找 key 对应的 DefaultAttribute 的过程
+            for (; ; ) {                     // 如果没有查找到，就在末尾新建一个，工作原理类似于 HashMap
                 DefaultAttribute<?> next = curr.next;
                 if (next == null) {
                     DefaultAttribute<T> attr = new DefaultAttribute<T>(head, key);

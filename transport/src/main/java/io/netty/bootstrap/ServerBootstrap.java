@@ -38,7 +38,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
- *
  */
 public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerChannel> {
 
@@ -46,11 +45,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<AttributeKey<?>, Object>();
-    private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
+    private final ServerBootstrapConfig config = new ServerBootstrapConfig(this); // 仅仅是通过 ServerBootstrapConfig 封装了 ServerBootstrap 缓存
     private volatile EventLoopGroup childGroup;
     private volatile ChannelHandler childHandler;
 
-    public ServerBootstrap() { }
+    public ServerBootstrap() {
+    }
 
     private ServerBootstrap(ServerBootstrap bootstrap) {
         super(bootstrap);
@@ -137,19 +137,19 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         return this;
     }
 
-    @Override
+    @Override // 这里可以看出 option 是 channel 的设置，attr 是一些属性值
     void init(Channel channel) throws Exception {
-        final Map<ChannelOption<?>, Object> options = options0();
-        synchronized (options) {
+        final Map<ChannelOption<?>, Object> options = options0(); // 父类中的 channel option
+        synchronized (options) { // 获取 NioServerSocketChannel 持有的 nio 原生 channel，从中拿到 channel socket 设置 option
             setChannelOptions(channel, options, logger);
         }
 
-        final Map<AttributeKey<?>, Object> attrs = attrs0();
-        synchronized (attrs) {
-            for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
+        final Map<AttributeKey<?>, Object> attrs = attrs0();    // 从父类中获取 attribute
+        synchronized (attrs) { // 将 attr 保存到 channel 中
+            for (Entry<AttributeKey<?>, Object> e : attrs.entrySet()) {
                 @SuppressWarnings("unchecked")
                 AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
-                channel.attr(key).set(e.getValue());
+                channel.attr(key).set(e.getValue()); // 这里 channel 继承自 DefaultAttributeMap，所以保存在 DefaultAttributeMap 中
             }
         }
 
@@ -186,9 +186,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         });
     }
 
-    @Override
+    @Override   // 验证父类中的 NioEventLoopGroup 和 ChannelFactory 不为空，验证 children 相关的 handler 和 group 不为空
     public ServerBootstrap validate() {
-        super.validate();
+        super.validate(); // 验证 NioEventLoopGroup 和 ChannelFactory 不为空
         if (childHandler == null) {
             throw new IllegalStateException("childHandler not set");
         }
@@ -247,7 +247,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
             setChannelOptions(child, childOptions, logger);
 
-            for (Entry<AttributeKey<?>, Object> e: childAttrs) {
+            for (Entry<AttributeKey<?>, Object> e : childAttrs) {
                 child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
             }
 

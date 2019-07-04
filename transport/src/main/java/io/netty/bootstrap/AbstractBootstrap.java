@@ -98,7 +98,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * The {@link Class} which is used to create {@link Channel} instances from.
      * You either use this or {@link #channelFactory(io.netty.channel.ChannelFactory)} if your
      * {@link Channel} implementation has no no-args constructor.
-     */
+     */ // 仅仅是缓存了 ChannelFactory
     public B channel(Class<? extends C> channelClass) {
         if (channelClass == null) {
             throw new NullPointerException("channelClass");
@@ -109,7 +109,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * @deprecated Use {@link #channelFactory(io.netty.channel.ChannelFactory)} instead.
      */
-    @Deprecated
+    @Deprecated // 缓存了 ChannelFactory
     public B channelFactory(ChannelFactory<? extends C> channelFactory) {
         if (channelFactory == null) {
             throw new NullPointerException("channelFactory");
@@ -271,7 +271,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind(SocketAddress localAddress) {
-        validate();
+        validate(); // 验证父类中的 NioEventLoopGroup 和 ChannelFactory 不为空，验证 children 相关的 handler 和 group 不为空
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
@@ -316,7 +316,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     final ChannelFuture initAndRegister() {
         Channel channel = null;
-        try {
+        try {   // 根据相应的 channel factory 构建 channel
             channel = channelFactory.newChannel();
             init(channel);
         } catch (Throwable t) {

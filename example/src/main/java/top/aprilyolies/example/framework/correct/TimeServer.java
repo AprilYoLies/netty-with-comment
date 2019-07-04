@@ -34,12 +34,18 @@ import io.netty.handler.codec.string.StringDecoder;
 public class TimeServer {
 
     public void bind(int port) throws Exception {
-        // 配置服务端的NIO线程组,主要就是构建了两倍 cpu 核心数的 NioEventLoop
+        // 配置服务端的NIO线程组,主要就是构建了两倍 cpu 核心数的 NioEventLoop，还有一些相关参数的缓存
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 1024)
+            // 将两个 EventLoopGroup 进行缓存
+            b.group(bossGroup, workerGroup)
+                    // 仅仅是缓存了 NioServerSocketChannel 对应的 ChannelFactory
+                    .channel(NioServerSocketChannel.class)
+                    // 将 option 缓存到父类的 option map 中
+                    .option(ChannelOption.SO_BACKLOG, 1024)
+                    // 缓存了 child channel handler
                     .childHandler(new ChildChannelHandler());
             // 绑定端口，同步等待成功
             ChannelFuture f = b.bind(port).sync();
