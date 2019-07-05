@@ -209,7 +209,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
                     Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");// 获取 selectorImplClass 的 publicSelectedKeys 字段
 
-                    if (PlatformDependent.javaVersion() >= 9 && PlatformDependent.hasUnsafe()) {
+                    if (PlatformDependent.javaVersion() >= 9 && PlatformDependent.hasUnsafe()) { // 忽视这一部分代码
                         // Let us try to use sun.misc.Unsafe to replace the SelectionKeySet.
                         // This allows us to also do this in Java9+ without any extra flags.
                         long selectedKeysFieldOffset = PlatformDependent.objectFieldOffset(selectedKeysField);
@@ -530,9 +530,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // Ignore.
         }
     }
-
+    // 处理 SelectedKeys
     private void processSelectedKeys() {
-        if (selectedKeys != null) {
+        if (selectedKeys != null) { // 处理 SelectedKeys，对于附件为 channel 的处理方式，根据 selectionKey 的 readyOps 的不同，处理方式也不同，附件如果为 NioTask，处理也不同
             processSelectedKeysOptimized(); // 优化的 SelectedKeys 处理方式
         } else {
             processSelectedKeysPlain(selector.selectedKeys());
@@ -547,7 +547,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             logger.warn("Failed to close a selector.", e);
         }
     }
-
+    // 取消 key
     void cancel(SelectionKey key) {
         key.cancel();
         cancelledKeys++;
@@ -605,18 +605,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
         }
     }
-
+    // 处理 SelectedKeys，对于附件为 channel 的处理方式，根据 selectionKey 的 readyOps 的不同，处理方式也不同，附件如果为 NioTask，处理也不同
     private void processSelectedKeysOptimized() {
         for (int i = 0; i < selectedKeys.size; ++i) {
-            final SelectionKey k = selectedKeys.keys[i];
+            final SelectionKey k = selectedKeys.keys[i];    // 其实 selected keys 就是保存在了 selectedKeys，应该我们在构建 selector 时，对对应的字段进行了替换
             // null out entry in the array to allow to have it GC'ed once the Channel close
             // See https://github.com/netty/netty/issues/2363
-            selectedKeys.keys[i] = null;
+            selectedKeys.keys[i] = null;    // 辅助垃圾回收
 
-            final Object a = k.attachment();
+            final Object a = k.attachment();    // 拿到 selection key 对应的附件
 
             if (a instanceof AbstractNioChannel) {
-                processSelectedKey(k, (AbstractNioChannel) a);
+                processSelectedKey(k, (AbstractNioChannel) a);  // 对于附件为 channel 的处理方式，根据 selectionKey 的 readyOps 的不同，处理方式也不同
             } else {
                 @SuppressWarnings("unchecked")
                 NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
@@ -626,20 +626,21 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             if (needsToSelectAgain) {
                 // null out entries in the array to allow to have it GC'ed once the Channel close
                 // See https://github.com/netty/netty/issues/2363
-                selectedKeys.reset(i + 1);
+                selectedKeys.reset(i + 1);  // 这里就是清空 selectedKeys 的 keys 集合
 
                 selectAgain();
                 i = -1;
             }
         }
     }
-
+    // 判断 selectionKey 的有效性，失效的话就进行相关的关闭操作，核心是关闭 nio 原生 channel，否则根据 selectionKey 的 readyOps 进行处理
+    // // 对于 server accept 而言，就是 nio 原生 channel accept 得到 SocketChannel，封装为 NioSocketChannel，然后 pipeline 触发 channelRead 和 channelReadComplete 事件
     private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
-        final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();
-        if (!k.isValid()) {
+        final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();    // 获取 channel 持有的 unsafe 实例
+        if (!k.isValid()) { // 如果 key 无效，就进行关闭操作，涉及到 outboundBuffer 的处理和 pipeline 事件的传播
             final EventLoop eventLoop;
             try {
-                eventLoop = ch.eventLoop();
+                eventLoop = ch.eventLoop(); // 获取 ch 对应的 event loop
             } catch (Throwable ignored) {
                 // If the channel implementation throws an exception because there is no event loop, we ignore this
                 // because we are only trying to determine if ch is registered to this event loop and thus has authority
@@ -652,17 +653,17 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // See https://github.com/netty/netty/issues/5125
             if (eventLoop != this || eventLoop == null) {
                 return;
-            }
+            }   // 如果是初次调用，就设置一些 promise 的状态关闭 outboundBuffer，同时通过 pipeline 传播一些事件，否则就是直接或者间接（添加监听器）设置处理结果
             // close the channel if the key is not valid anymore
             unsafe.close(unsafe.voidPromise());
             return;
         }
 
         try {
-            int readyOps = k.readyOps();
+            int readyOps = k.readyOps();    // 从 key 中获取就绪的事件
             // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
             // the NIO JDK channel implementation may throw a NotYetConnectedException.
-            if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+            if ((readyOps & SelectionKey.OP_CONNECT) != 0) {    // 如果是 OP_CONNECT 事件
                 // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                 // See https://github.com/netty/netty/issues/924
                 int ops = k.interestOps();
@@ -673,15 +674,15 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
 
             // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
-            if ((readyOps & SelectionKey.OP_WRITE) != 0) {
+            if ((readyOps & SelectionKey.OP_WRITE) != 0) {  // 如果是 OP_WRITE 事件
                 // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write
                 ch.unsafe().forceFlush();
             }
 
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
-            // to a spin loop
+            // to a spin loop   // OP_READ 或者 OP_ACCEPT 或者为 0
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                unsafe.read();
+                unsafe.read();  // 对于 NioServerSocketChannel 而言，该方法就是 nio 原生 channel accept 得到 SocketChannel，封装为 NioSocketChannel，然后 pipeline 触发 channelRead 和 channelReadComplete 事件
             }
         } catch (CancelledKeyException ignored) {
             unsafe.close(unsafe.voidPromise());

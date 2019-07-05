@@ -925,7 +925,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
-    @Override
+    @Override   // channel read 事件也是从 head 节点开始传播的
     public final ChannelPipeline fireChannelRead(Object msg) {
         AbstractChannelHandlerContext.invokeChannelRead(head, msg);
         return this;
@@ -1294,7 +1294,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             onUnhandledInboundMessage(msg);
         }
 
-        @Override
+        @Override   // tail context 不对 ReadComplete 事件进行处理
         public void channelReadComplete(ChannelHandlerContext ctx) {
             onUnhandledInboundChannelReadComplete();
         }
@@ -1411,7 +1411,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) {
             ctx.fireChannelReadComplete();
-
+            // 如果 channel 别设置为 auto read，那么就调用 channel 的 read 方法
             readIfIsAutoRead();
         }
         // 如果 channel 别设置为 auto read，那么就调用 channel 的 read 方法

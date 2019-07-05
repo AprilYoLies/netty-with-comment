@@ -41,9 +41,9 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
 
     /**
      * Creates a new instance.
-     */
+     */ // 总的来说就是缓存了一些信息到 config 类中，主要有 allocator，channel（netty），javaSocket 等
     public DefaultSocketChannelConfig(SocketChannel channel, Socket javaSocket) {
-        super(channel);
+        super(channel); // 这里就是从 metadata 中获取 maxMessagesPerRead 属性值设置到 allocator 中，然后缓存 allocator 到 config 类中，channel 也缓存到了 config 类中
         if (javaSocket == null) {
             throw new NullPointerException("javaSocket");
         }
@@ -51,8 +51,8 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
 
         // Enable TCP_NODELAY by default if possible.
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
-            try {
-                setTcpNoDelay(true);
+            try {   // 平台支持 TcpNoDelay，也进行配置
+                setTcpNoDelay(true);    // 用于设置 nio 原生 channel 支持 TcpNoDelay
             } catch (Exception e) {
                 // Ignore.
             }
@@ -134,7 +134,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
-    @Override
+    @Override   // 获取 javaSocket 的 SendBufferSize
     public int getSendBufferSize() {
         try {
             return javaSocket.getSendBufferSize();
@@ -249,7 +249,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         return this;
     }
 
-    @Override
+    @Override   // 用于设置 nio 原生 channel 支持 TcpNoDelay
     public SocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
         try {
             javaSocket.setTcpNoDelay(tcpNoDelay);
@@ -305,9 +305,9 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         return this;
     }
 
-    @Override
+    @Override   // 缓存 rcvBufAllocator 类到 config 类中
     public SocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
+        super.setRecvByteBufAllocator(allocator);   // 缓存 rcvBufAllocator 类到 config 类中
         return this;
     }
 

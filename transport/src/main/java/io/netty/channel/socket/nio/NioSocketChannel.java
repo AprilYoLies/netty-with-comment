@@ -55,7 +55,7 @@ import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRI
  */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
-    private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
+    private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();  // nio 原生 selector provider
 
     private static SocketChannel newSocket(SelectorProvider provider) {
         try {
@@ -99,11 +99,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      *
      * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
      * @param socket    the {@link SocketChannel} which will be used
-     */
+     */     // parent 为 netty 的 channel，socket 为 nio 的原生 channel
     public NioSocketChannel(Channel parent, SocketChannel socket) {
-        super(parent, socket);
-        config = new NioSocketChannelConfig(this, socket.socket());
-    }
+        super(parent, socket);  // 缓存了父 channel 信息，构建了 id，unsafe，pipeline，ch，readInterestOp 字段,同时设置 ch 为非阻塞的
+        config = new NioSocketChannelConfig(this, socket.socket()); // 缓存了一些信息到 config 类中，主要有 allocator，channel（netty），javaSocket
+    }   // 设置 maxBytesPerGatheringWrite 参数，值为 SendBufferSize 的两倍
 
     @Override
     public ServerSocketChannel parent() {
@@ -334,10 +334,10 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         doClose();
     }
 
-    @Override
+    @Override   // 设置相关状态，关闭原生 channel
     protected void doClose() throws Exception {
-        super.doClose();
-        javaChannel().close();
+        super.doClose();    // 针对 connectPromise 和 connectTimeoutFuture 的状态的一些设置
+        javaChannel().close(); // 关闭 nio 原生 channel
     }
 
     @Override
@@ -435,7 +435,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         incompleteWrite(writeSpinCount < 0);
     }
 
-    @Override
+    @Override   // 其实是 NioByteUnsafe 的一种类型
     protected AbstractNioUnsafe newUnsafe() {
         return new NioSocketChannelUnsafe();
     }
@@ -464,8 +464,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     private final class NioSocketChannelConfig extends DefaultSocketChannelConfig {
         private volatile int maxBytesPerGatheringWrite = Integer.MAX_VALUE;
         private NioSocketChannelConfig(NioSocketChannel channel, Socket javaSocket) {
-            super(channel, javaSocket);
-            calculateMaxBytesPerGatheringWrite();
+            super(channel, javaSocket); // 总的来说就是缓存了一些信息到 config 类中，主要有 allocator，channel（netty），javaSocket 等
+            calculateMaxBytesPerGatheringWrite();   // 设置 maxBytesPerGatheringWrite 参数，值为 SendBufferSize 的两倍
         }
 
         @Override
@@ -512,12 +512,12 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         int getMaxBytesPerGatheringWrite() {
             return maxBytesPerGatheringWrite;
         }
-
+        // 设置 maxBytesPerGatheringWrite 参数，值为 SendBufferSize 的两倍
         private void calculateMaxBytesPerGatheringWrite() {
             // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
-            int newSendBufferSize = getSendBufferSize() << 1;
+            int newSendBufferSize = getSendBufferSize() << 1;   // 获取 javaSocket 的 SendBufferSize，这里可以看出是 SendBufferSize 的两倍
             if (newSendBufferSize > 0) {
-                setMaxBytesPerGatheringWrite(getSendBufferSize() << 1);
+                setMaxBytesPerGatheringWrite(getSendBufferSize() << 1); // 保存 maxBytesPerGatheringWrite 参数，为 SendBufferSize 的两倍
             }
         }
 

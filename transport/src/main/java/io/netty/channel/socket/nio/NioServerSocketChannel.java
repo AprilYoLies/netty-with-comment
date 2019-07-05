@@ -135,18 +135,18 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         }
     }
 
-    @Override
+    @Override   // 关闭 nio 原生 channel
     protected void doClose() throws Exception {
         javaChannel().close();
     }
 
-    @Override
+    @Override   // 差不多就是得到 SocketChannel ，封装成 NioSocketChannel 返回
     protected int doReadMessages(List<Object> buf) throws Exception {
+        // 就是调用 ServerSocketChannel 的 accept 方法来得到 SocketChannel
         SocketChannel ch = SocketUtils.accept(javaChannel());
-
         try {
-            if (ch != null) {
-                buf.add(new NioSocketChannel(this, ch));
+            if (ch != null) {   // 将 SocketChannel 封装成为 NioSocketChannel 添加到 buf 中
+                buf.add(new NioSocketChannel(this, ch));    // 这里说明 NioSocketChannel 不仅持有了 SocketChannel（nio），还持有了 NioServerSocketChannel
                 return 1;
             }
         } catch (Throwable t) {

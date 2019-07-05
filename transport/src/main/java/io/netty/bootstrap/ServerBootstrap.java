@@ -244,21 +244,21 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             final Channel child = (Channel) msg;
-
+            // 为 channel 添加了 childHandler
             child.pipeline().addLast(childHandler);
-
+            // 设置相关的 option
             setChannelOptions(child, childOptions, logger);
 
-            for (Entry<AttributeKey<?>, Object> e : childAttrs) {
+            for (Entry<AttributeKey<?>, Object> e : childAttrs) {   // 这里就是对 nio 原生 channel 进行相关 option 的设置
                 child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
             }
 
-            try {
+            try {   // 注册 child，也就是将 nio 原生的 socket channel 注册到 selector 上，添加的这个监听器就是用于检测注册的结果的，注册完成后会进行触发
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            forceClose(child, future.cause());
+                        if (!future.isSuccess()) {  // 如果注册的结果不成功，就需要关闭当前这个 channel
+                            forceClose(child, future.cause());  // 设置相关状态，关闭原生 channel
                         }
                     }
                 });
@@ -266,9 +266,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 forceClose(child, t);
             }
         }
-
+        // 设置相关状态，关闭原生 channel
         private static void forceClose(Channel child, Throwable t) {
-            child.unsafe().closeForcibly();
+            child.unsafe().closeForcibly(); // 设置相关状态，关闭原生 channel
             logger.warn("Failed to register an accepted channel: {}", child, t);
         }
 

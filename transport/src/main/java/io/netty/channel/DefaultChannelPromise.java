@@ -49,7 +49,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
      *        the {@link Channel} associated with this future
      */
     public DefaultChannelPromise(Channel channel, EventExecutor executor) {
-        super(executor);
+        super(executor);    // 仅仅是缓存了 executor
         this.channel = checkNotNull(channel, "channel");
     }
 

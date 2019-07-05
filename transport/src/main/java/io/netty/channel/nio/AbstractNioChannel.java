@@ -79,9 +79,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * @param parent         the parent {@link Channel} by which this instance was created. May be {@code null}
      * @param ch             the underlying {@link SelectableChannel} on which it operates
      * @param readInterestOp the ops to set to receive data from the {@link SelectableChannel}
-     */
+     */ // 缓存了父 channel 信息，构建了 id，unsafe，pipeline，ch，readInterestOp 字段,同时设置 ch 为非阻塞的
     protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
-        super(parent);
+        super(parent);  // 缓存了父 channel 信息，构建了 id，unsafe，pipeline 字段
         this.ch = ch; // 缓存原生 channel
         this.readInterestOp = readInterestOp; // 指定感兴趣的事件
         try {
@@ -216,18 +216,18 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
-
+        // 移除 selectionKey 的 read 感兴趣事件
         protected final void removeReadOp() {
             SelectionKey key = selectionKey();
             // Check first if the key is still valid as it may be canceled as part of the deregistration
             // from the EventLoop
             // See https://github.com/netty/netty/issues/2104
-            if (!key.isValid()) {
+            if (!key.isValid()) {   // 失效的 SelectionKey 不进行处理
                 return;
             }
             int interestOps = key.interestOps();
             if ((interestOps & readInterestOp) != 0) {
-                // only remove readInterestOp if needed
+                // only remove readInterestOp if needed // 移除 selectionKey 的 read 感兴趣事件
                 key.interestOps(interestOps & ~readInterestOp);
             }
         }
@@ -500,12 +500,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return buf;
     }
 
-    @Override
+    @Override   // 针对 connectPromise 和 connectTimeoutFuture 的状态的一些设置
     protected void doClose() throws Exception {
         ChannelPromise promise = connectPromise;
         if (promise != null) {
             // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(DO_CLOSE_CLOSED_CHANNEL_EXCEPTION);
+            promise.tryFailure(DO_CLOSE_CLOSED_CHANNEL_EXCEPTION);  // 设置 promise 的状态为失败
             connectPromise = null;
         }
 

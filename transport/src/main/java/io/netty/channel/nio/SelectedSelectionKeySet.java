@@ -87,7 +87,7 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
     void reset() {
         reset(0);
     }
-
+    // 就是将 keys 清空
     void reset(int start) {
         Arrays.fill(keys, start, size, null);
         size = 0;

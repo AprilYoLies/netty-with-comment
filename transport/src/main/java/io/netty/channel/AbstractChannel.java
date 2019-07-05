@@ -59,8 +59,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelId id;
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
-    private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
-    private final CloseFuture closeFuture = new CloseFuture(this);
+    private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false); // 持有了当前 NioSocketChannel 信息
+    private final CloseFuture closeFuture = new CloseFuture(this);  // close 状态 promise
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
@@ -79,12 +79,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Creates a new instance.
      *
      * @param parent the parent of this channel. {@code null} if there's no parent.
-     */
+     */ // 缓存了父 channel 信息，构建了 id，unsafe，pipeline 字段
     protected AbstractChannel(Channel parent) {
-        this.parent = parent;
-        id = newId();
-        unsafe = newUnsafe();
-        pipeline = newChannelPipeline();
+        this.parent = parent;   // 缓存了 NioSErverSocketChannel，也就是当前 NioSocketChannel 是由谁所接收构建的
+        id = newId();   // id 信息
+        unsafe = newUnsafe();   // 构建的是 NioByteUnsafe 实现类
+        pipeline = newChannelPipeline();    // 构建 DefaultChannelPipeline，持有了 channel
     }
 
     /**
@@ -114,7 +114,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Returns a new {@link DefaultChannelPipeline} instance.
-     */
+     */ // 构建 DefaultChannelPipeline，持有了 channel
     protected DefaultChannelPipeline newChannelPipeline() {
         return new DefaultChannelPipeline(this); // 这里说明 pipeline 持有了 channel
     }
@@ -439,7 +439,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assert !registered || eventLoop.inEventLoop();
         }
 
-        @Override
+        @Override // 获取 recvHandle，如果没有则进行创建
         public RecvByteBufAllocator.Handle recvBufAllocHandle() {
             if (recvHandle == null) {
                 recvHandle = config().getRecvByteBufAllocator().newHandle();
@@ -614,7 +614,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public final void close(final ChannelPromise promise) {
             assertEventLoop();
-
+            // 如果是初次调用，就设置一些 promise 的状态关闭 outboundBuffer，同时通过 pipeline 传播一些事件，否则就是直接或者间接（添加监听器）设置处理结果
             close(promise, CLOSE_CLOSED_CHANNEL_EXCEPTION, CLOSE_CLOSED_CHANNEL_EXCEPTION, false);
         }
 
@@ -690,20 +690,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             buffer.close(cause, true);
             pipeline.fireUserEventTriggered(ChannelOutputShutdownEvent.INSTANCE);
         }
-
+        // 如果是初次调用，就设置一些 promise 的状态关闭 outboundBuffer，同时通过 pipeline 传播一些事件，否则就是直接或者间接（添加监听器）设置处理结果
         private void close(final ChannelPromise promise, final Throwable cause,
                            final ClosedChannelException closeCause, final boolean notify) {
             if (!promise.setUncancellable()) {
                 return; // 执行到这里，说明 promise 的状态已经是被设置
             }
 
-            if (closeInitiated) {
-                if (closeFuture.isDone()) {
+            if (closeInitiated) {   // 看 close 过程是否已经初始化过了
+                if (closeFuture.isDone()) { // 如果 closeFuture 已经被设置，就修改 promise 状态
                     // Closed already.
                     safeSetSuccess(promise); // 设置 close 的过程已经完成
                 } else if (!(promise instanceof VoidChannelPromise)) { // Only needed if no VoidChannelPromise.
                     // This means close() was called before so we just register a listener and return
-                    closeFuture.addListener(new ChannelFutureListener() {
+                    closeFuture.addListener(new ChannelFutureListener() {   // 这里就是向 closeFuture 添加监听器，来监听完成事件，以此来设置 promise 状态
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             promise.setSuccess();
@@ -715,7 +715,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             closeInitiated = true;
 
-            final boolean wasActive = isActive();
+            final boolean wasActive = isActive();   // channel 的激活状态
             final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
             Executor closeExecutor = prepareToClose();
@@ -725,7 +725,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     public void run() {
                         try {
                             // Execute the close.
-                            doClose0(promise);
+                            doClose0(promise);  // 主要就是对一些 promise 的状态的设置
                         } finally {
                             // Call invokeLater so closeAndDeregister is executed in the EventLoop again!
                             invokeLater(new Runnable() {
@@ -733,10 +733,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                                 public void run() {
                                     if (outboundBuffer != null) {
                                         // Fail all the queued messages
-                                        outboundBuffer.failFlushed(cause, notify);
+                                        outboundBuffer.failFlushed(cause, notify);  // 关闭 outboundBuffer（后边再细看）
                                         outboundBuffer.close(closeCause);
                                     }
-                                    fireChannelInactiveAndDeregister(wasActive);
+                                    fireChannelInactiveAndDeregister(wasActive);    // 触发 channel 失效取消注册事件
                                 }
                             });
                         }
@@ -745,66 +745,66 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } else {
                 try {
                     // Close the channel and fail the queued messages in all cases.
-                    doClose0(promise);
+                    doClose0(promise);  // 主要就是对一些 promise 的状态的设置
                 } finally {
                     if (outboundBuffer != null) {
                         // Fail all the queued messages.
-                        outboundBuffer.failFlushed(cause, notify);
+                        outboundBuffer.failFlushed(cause, notify);  // outboundBuffer 的处理
                         outboundBuffer.close(closeCause);
                     }
                 }
                 if (inFlush0) {
                     invokeLater(new Runnable() {
                         @Override
-                        public void run() {
+                        public void run() { // 注销事件，主要是修改状态，取消 selection key，pipeline 传播两种事件
                             fireChannelInactiveAndDeregister(wasActive);
                         }
                     });
-                } else {
+                } else {    // 注销事件，主要是修改状态，取消 selection key，pipeline 传播两种事件
                     fireChannelInactiveAndDeregister(wasActive);
                 }
             }
         }
-
+        // 主要就是对一些 promise 的状态的设置
         private void doClose0(ChannelPromise promise) {
             try {
-                doClose();
-                closeFuture.setClosed();
-                safeSetSuccess(promise);
+                doClose();  // 子类实现就是对一些 promise 状态的设置
+                closeFuture.setClosed();    // 修改 closeFuture 状态
+                safeSetSuccess(promise); // 设置 promise 的状态
             } catch (Throwable t) {
                 closeFuture.setClosed();
                 safeSetFailure(promise, t);
             }
         }
-
+        // 注销事件，主要是修改状态，取消 selection key，pipeline 传播两种事件
         private void fireChannelInactiveAndDeregister(final boolean wasActive) {
             deregister(voidPromise(), wasActive && !isActive());
         }
 
-        @Override
+        @Override   // 设置相关状态，关闭原生 channel
         public final void closeForcibly() {
             assertEventLoop();
 
-            try {
+            try {   // 设置相关状态，关闭原生 channel
                 doClose();
             } catch (Exception e) {
                 logger.warn("Failed to close a channel.", e);
             }
         }
 
-        @Override
+        @Override   // 注销事件，主要是修改状态，取消 selection key，pipeline 传播两种事件
         public final void deregister(final ChannelPromise promise) {
             assertEventLoop();
-
+            // 注销事件，主要是修改状态，取消 selection key，pipeline 传播两种事件
             deregister(promise, false);
         }
-
+        // 注销事件，主要是修改状态，取消 selection key，pipeline 传播两种事件
         private void deregister(final ChannelPromise promise, final boolean fireChannelInactive) {
-            if (!promise.setUncancellable()) {
+            if (!promise.setUncancellable()) {  // promise 还没被设置过
                 return;
             }
 
-            if (!registered) {
+            if (!registered) {  // 如果 channel 本来就没注册过，直接设置结果为成功
                 safeSetSuccess(promise);
                 return;
             }
@@ -822,22 +822,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 @Override
                 public void run() {
                     try {
-                        doDeregister();
+                        doDeregister(); // 子类实现就是取消 selection key
                     } catch (Throwable t) {
                         logger.warn("Unexpected exception occurred while deregistering a channel.", t);
                     } finally {
                         if (fireChannelInactive) {
-                            pipeline.fireChannelInactive();
+                            pipeline.fireChannelInactive(); // pipeline 传播对应的事件
                         }
                         // Some transports like local and AIO does not allow the deregistration of
                         // an open channel.  Their doDeregister() calls close(). Consequently,
                         // close() calls deregister() again - no need to fire channelUnregistered, so check
                         // if it was registered.
                         if (registered) {
-                            registered = false;
-                            pipeline.fireChannelUnregistered();
+                            registered = false; // 修改 channel 的状态
+                            pipeline.fireChannelUnregistered(); // pipeline 再传播对应的事件
                         }
-                        safeSetSuccess(promise);
+                        safeSetSuccess(promise);    // 设置处理的结果
                     }
                 }
             });

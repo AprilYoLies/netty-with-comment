@@ -41,7 +41,7 @@ import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16); // channel 的元信息
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
@@ -61,9 +61,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      *
      * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
      * @param ch                the underlying {@link SelectableChannel} on which it operates
-     */
+     */ // 缓存了父 channel 信息，构建了 id，unsafe，pipeline，ch，readInterestOp 字段,同时设置 ch 为非阻塞的
     protected AbstractNioByteChannel(Channel parent, SelectableChannel ch) {
-        super(parent, ch, SelectionKey.OP_READ);
+        super(parent, ch, SelectionKey.OP_READ);    // 缓存了父 channel 信息，构建了 id，unsafe，pipeline，ch，readInterestOp 字段,同时设置 ch 为非阻塞的
     }
 
     /**

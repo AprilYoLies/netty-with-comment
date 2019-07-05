@@ -101,7 +101,7 @@ public final class SocketUtils {
             throw (IOException) e.getCause();
         }
     }
-
+    // 就是调用 ServerSocketChannel 的 accept 方法来得到 SocketChannel
     public static SocketChannel accept(final ServerSocketChannel serverSocketChannel) throws IOException {
         try {
             return AccessController.doPrivileged(new PrivilegedExceptionAction<SocketChannel>() {

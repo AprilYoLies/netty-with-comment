@@ -60,19 +60,19 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
-    private volatile int writeSpinCount = 16;
+    private volatile int writeSpinCount = 16;   // 写自旋次数
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
     private volatile WriteBufferWaterMark writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
     private volatile boolean pinEventExecutor = true;
-
+    // 这里就是从 metadata 中获取 maxMessagesPerRead 属性值设置到 allocator 中，然后缓存 allocator 到 config 类中，channel 也缓存到了 config 类中
     public DefaultChannelConfig(Channel channel) {
         this(channel, new AdaptiveRecvByteBufAllocator());
     }
-
+    // 这里就是从 metadata 中获取 maxMessagesPerRead 属性值设置到 allocator 中，然后缓存 allocator 到 config 类中，channel 也缓存到了 config 类中
     protected DefaultChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
-        setRecvByteBufAllocator(allocator, channel.metadata());
+        setRecvByteBufAllocator(allocator, channel.metadata()); // 这里就是从 metadata 中获取 maxMessagesPerRead 属性值设置到 allocator 中，然后缓存 allocator 到 config 类中
         this.channel = channel;
     }
 
@@ -287,12 +287,12 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @SuppressWarnings("unchecked")
-    @Override
+    @Override   // 获取配置类中的 rcvBufAllocator
     public <T extends RecvByteBufAllocator> T getRecvByteBufAllocator() {
         return (T) rcvBufAllocator;
     }
 
-    @Override
+    @Override   // 缓存 rcvBufAllocator 类到 config 类中
     public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
         rcvBufAllocator = checkNotNull(allocator, "allocator");
         return this;
@@ -303,13 +303,13 @@ public class DefaultChannelConfig implements ChannelConfig {
      * @param allocator the allocator to set.
      * @param metadata Used to set the {@link ChannelMetadata#defaultMaxMessagesPerRead()} if {@code allocator}
      * is of type {@link MaxMessagesRecvByteBufAllocator}.
-     */
+     */ // 这里就是从 metadata 中获取 maxMessagesPerRead 属性值设置到 allocator 中，然后缓存 allocator 到 config 类中
     private void setRecvByteBufAllocator(RecvByteBufAllocator allocator, ChannelMetadata metadata) {
-        if (allocator instanceof MaxMessagesRecvByteBufAllocator) {
+        if (allocator instanceof MaxMessagesRecvByteBufAllocator) { // 这里就是从 metadata 获取 maxMessagesPerRead 属性值设置到 allocator 中
             ((MaxMessagesRecvByteBufAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
         } else if (allocator == null) {
             throw new NullPointerException("allocator");
-        }
+        }   // 缓存 rcvBufAllocator 类到 config 类中
         setRecvByteBufAllocator(allocator);
     }
 

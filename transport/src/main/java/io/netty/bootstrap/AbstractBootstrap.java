@@ -451,18 +451,18 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             setChannelOption(channel, e.getKey(), e.getValue(), logger);
         }
     }
-
+    // 这里就是对 nio 原生 channel 进行相关 option 的设置
     static void setChannelOptions(
             Channel channel, Map.Entry<ChannelOption<?>, Object>[] options, InternalLogger logger) {
-        for (Map.Entry<ChannelOption<?>, Object> e: options) {
+        for (Map.Entry<ChannelOption<?>, Object> e: options) {  // 这里就是对 nio 原生 channel 进行相关 option 的设置
             setChannelOption(channel, e.getKey(), e.getValue(), logger);
         }
     }
 
     @SuppressWarnings("unchecked")
-    private static void setChannelOption(
+    private static void setChannelOption(// 这里就是对 nio 原生 channel 进行相关 option 的设置
             Channel channel, ChannelOption<?> option, Object value, InternalLogger logger) {
-        try {
+        try {   // 这里就是对 nio 原生 channel 进行相关 option 的设置
             if (!channel.config().setOption((ChannelOption<Object>) option, value)) {
                 logger.warn("Unknown channel option '{}' for channel '{}'", option, channel);
             }

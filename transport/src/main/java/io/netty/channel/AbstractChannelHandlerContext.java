@@ -332,12 +332,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
-        invokeChannelRead(findContextInbound(), msg);
+        invokeChannelRead(findContextInbound(), msg);   // 触发下一个 inbound context 的 ChannelRead 方法
         return this;
     }
 
     static void invokeChannelRead(final AbstractChannelHandlerContext next, Object msg) {
-        final Object m = next.pipeline.touch(ObjectUtil.checkNotNull(msg, "msg"), next);
+        final Object m = next.pipeline.touch(ObjectUtil.checkNotNull(msg, "msg"), next);    // 对 ReferenceCounted 类型的数据进行 touch
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelRead(m);
@@ -352,7 +352,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private void invokeChannelRead(Object msg) {
-        if (invokeHandler()) {
+        if (invokeHandler()) { // 检查 handler 的状态是 ADD_COMPLETE 或者是 ADD_PENDING 状态
             try {
                 ((ChannelInboundHandler) handler()).channelRead(this, msg);
             } catch (Throwable t) {

@@ -42,7 +42,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         return maxMessagesPerRead;
     }
 
-    @Override
+    @Override   // 指定 maxMessagesPerRead 参数
     public MaxMessagesRecvByteBufAllocator maxMessagesPerRead(int maxMessagesPerRead) {
         checkPositive(maxMessagesPerRead, "maxMessagesPerRead");
         this.maxMessagesPerRead = maxMessagesPerRead;
@@ -102,7 +102,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         /**
          * Only {@link ChannelConfig#getMaxMessagesPerRead()} is used.
          */
-        @Override
+        @Override   // 缓存 config，恢复 maxMessagePerRead，totalMessages，totalBytesRead 参数
         public void reset(ChannelConfig config) {
             this.config = config;
             maxMessagePerRead = maxMessagesPerRead();
@@ -114,7 +114,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
             return alloc.ioBuffer(guess());
         }
 
-        @Override
+        @Override   // 增加计数 totalMessages
         public final void incMessagesRead(int amt) {
             totalMessages += amt;
         }
@@ -139,9 +139,9 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
 
         @Override
         public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-            return config.isAutoRead() &&
+            return config.isAutoRead() &&   // config 配置了自动读
                    (!respectMaybeMoreData || maybeMoreDataSupplier.get()) &&
-                   totalMessages < maxMessagePerRead &&
+                   totalMessages < maxMessagePerRead && // 最多只读 16 个数据
                    totalBytesRead > 0;
         }
 
@@ -158,7 +158,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         public void attemptedBytesRead(int bytes) {
             attemptedBytesRead = bytes;
         }
-
+        // 获取 totalBytesRead
         protected final int totalBytesRead() {
             return totalBytesRead < 0 ? Integer.MAX_VALUE : totalBytesRead;
         }
