@@ -56,7 +56,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         STRING_BUILDER_MAX_SIZE = SystemPropertyUtil.getInt("io.netty.threadLocalMap.stringBuilder.maxSize", 1024 * 4);
         logger.debug("-Dio.netty.threadLocalMap.stringBuilder.maxSize: {}", STRING_BUILDER_MAX_SIZE);
     }
-
+    // 获取线程本地变量 InternalThreadLocalMap
     public static InternalThreadLocalMap getIfSet() {
         Thread thread = Thread.currentThread();
         if (thread instanceof FastThreadLocalThread) {

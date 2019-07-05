@@ -50,13 +50,13 @@ public class FastThreadLocal<V> {
      * are in a container environment, and you don't want to leave the thread local variables in the threads you do not
      * manage.
      */
-    public static void removeAll() {
+    public static void removeAll() {    // 获取线程本地变量 InternalThreadLocalMap
         InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.getIfSet();
-        if (threadLocalMap == null) {
+        if (threadLocalMap == null) {   // 为空直接返回
             return;
         }
 
-        try {
+        try {   // 这里得到的应该是下一个将要被移除的 object
             Object v = threadLocalMap.indexedVariable(variablesToRemoveIndex);
             if (v != null && v != InternalThreadLocalMap.UNSET) {
                 @SuppressWarnings("unchecked")

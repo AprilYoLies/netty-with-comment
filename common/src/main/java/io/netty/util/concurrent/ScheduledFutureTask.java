@@ -166,7 +166,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         }
         return canceled;
     }
-
+    // 取消的方式就是将结果设置为 CANCELLATION_CAUSE_HOLDER，然后必要的话就通知 waiters
     boolean cancelWithoutRemove(boolean mayInterruptIfRunning) {
         return super.cancel(mayInterruptIfRunning);
     }

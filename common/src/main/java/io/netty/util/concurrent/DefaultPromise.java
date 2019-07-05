@@ -300,7 +300,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      *
      * @param mayInterruptIfRunning this value has no effect in this implementation.
      */
-    @Override
+    @Override   // 取消的方式就是将结果设置为 CANCELLATION_CAUSE_HOLDER，然后必要的话就通知 waiters
     public boolean cancel(boolean mayInterruptIfRunning) {
         if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
             if (checkNotifyWaiters()) {

@@ -524,7 +524,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             });
         }
     }
-
+    // 执行 ShutdownHooks，其实 ShutdownHooks 就是 Runnable 实例
     private boolean runShutdownHooks() {
         boolean ran = false;
         // Note shutdown hooks can add / remove shutdown hooks.
@@ -674,22 +674,22 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     /**
      * Confirm that the shutdown if the instance should be done now!
-     */
+     */ // 确认关闭状态
     protected boolean confirmShutdown() {
         if (!isShuttingDown()) {
-            return false;
+            return false;   // 一定是 shutting down 状态
         }
 
-        if (!inEventLoop()) {
+        if (!inEventLoop()) {   // 当前线程一定是 event loop 线程
             throw new IllegalStateException("must be invoked from an event loop");
         }
-
+        // 取消全部的 ScheduledTasks，取消的方式就是将结果设置为 CANCELLATION_CAUSE_HOLDER，然后必要的话就通知 waiters，最后清空队列
         cancelScheduledTasks();
-
+        // 记录 gracefulShutdown 开始时间戳
         if (gracefulShutdownStartTime == 0) {
             gracefulShutdownStartTime = ScheduledFutureTask.nanoTime();
         }
-
+        // 执行相应的任务和ShutdownHooks
         if (runAllTasks() || runShutdownHooks()) {
             if (isShutdown()) {
                 // Executor shut down - no new tasks anymore.
@@ -702,7 +702,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if (gracefulShutdownQuietPeriod == 0) {
                 return true;
             }
-            wakeup(true);
+            wakeup(true);   // 这是向任务队列中添加一个 WAKEUP_TASK
             return false;
         }
 
@@ -905,10 +905,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 try {   // 这就是 event loop 线程做的事情，有任务那么就执行任务，否则执行 select 操作，根据 select 的结果处理 selected key
                     SingleThreadEventExecutor.this.run();   // 这里是一个死循环，event loop 线程做的事情，就是有任务那么就执行任务，否则执行 select 操作，根据 select 的结果处理 selected key
                     success = true;
-                } catch (Throwable t) {
+                } catch (Throwable t) { // 执行到这里说明 event loop 的线程出现异常
                     logger.warn("Unexpected exception from an event executor: ", t);
-                } finally {
-                    for (;;) {
+                } finally { // 收尾工作
+                    for (;;) {  // 这个循环就是保证将 state 设置为 ST_SHUTTING_DOWN 状态
                         int oldState = state;
                         if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
                                 SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
@@ -927,30 +927,30 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
                     try {
                         // Run all remaining tasks and shutdown hooks.
-                        for (;;) {
+                        for (;;) {  // 完成剩下的 tasks 和 shutdown hooks
                             if (confirmShutdown()) {
                                 break;
                             }
                         }
                     } finally {
                         try {
-                            cleanup();
+                            cleanup();  // 关闭 selector
                         } finally {
                             // Lets remove all FastThreadLocals for the Thread as we are about to terminate and notify
                             // the future. The user may block on the future and once it unblocks the JVM may terminate
                             // and start unloading classes.
                             // See https://github.com/netty/netty/issues/6596.
-                            FastThreadLocal.removeAll();
-
+                            FastThreadLocal.removeAll();    // 没看懂
+                            // 修正 event loop 的状态
                             STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
                             threadLock.release();
-                            if (!taskQueue.isEmpty()) {
+                            if (!taskQueue.isEmpty()) { // executor 关闭了，但是任务队列仍不为空，那么就日志警告
                                 if (logger.isWarnEnabled()) {
                                     logger.warn("An event executor terminated with " +
                                             "non-empty task queue (" + taskQueue.size() + ')');
                                 }
                             }
-                            terminationFuture.setSuccess(null);
+                            terminationFuture.setSuccess(null); // 设置 future 的状态
                         }
                     }
                 }

@@ -69,21 +69,21 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      * Cancel all scheduled tasks.
      *
      * This method MUST be called only when {@link #inEventLoop()} is {@code true}.
-     */
+     */ // 取消全部的 ScheduledTasks，取消的方式就是将结果设置为 CANCELLATION_CAUSE_HOLDER，然后必要的话就通知 waiters，最后清空队列
     protected void cancelScheduledTasks() {
         assert inEventLoop();
         PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         if (isNullOrEmpty(scheduledTaskQueue)) {
-            return;
+            return; // 没有 task 直接返回
         }
 
         final ScheduledFutureTask<?>[] scheduledTasks =
                 scheduledTaskQueue.toArray(new ScheduledFutureTask<?>[0]);
-
+        // 取消的方式就是将结果设置为 CANCELLATION_CAUSE_HOLDER，然后必要的话就通知 waiters
         for (ScheduledFutureTask<?> task: scheduledTasks) {
             task.cancelWithoutRemove(false);
         }
-
+        // 最后清空队列
         scheduledTaskQueue.clearIgnoringIndexes();
     }
 
