@@ -133,12 +133,12 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         return !(task instanceof NonWakeupRunnable);
     }
 
-    @Override
+    @Override // 逐个执行 tailTasks 中的任务，这里是一次性将所有任务执行完，没有时间限制
     protected void afterRunningAllTasks() {
         runAllTasksFrom(tailTasks);
     }
 
-    @Override
+    @Override   // 看任务队里是否为空
     protected boolean hasTasks() {
         return super.hasTasks() || !tailTasks.isEmpty();
     }

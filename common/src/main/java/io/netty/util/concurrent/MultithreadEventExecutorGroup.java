@@ -156,12 +156,12 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
      */
     protected abstract EventExecutor newChild(Executor executor, Object... args) throws Exception;
 
-    @Override
+    @Override // 优雅停机，即依次关闭 event loop
     public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         for (EventExecutor l : children) {
             l.shutdownGracefully(quietPeriod, timeout, unit);
         }
-        return terminationFuture();
+        return terminationFuture(); // 返回终止结果
     }
 
     @Override

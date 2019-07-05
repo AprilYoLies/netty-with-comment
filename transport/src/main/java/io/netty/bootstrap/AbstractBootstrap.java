@@ -292,7 +292,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         if (regFuture.isDone()) { // 如果 result 是已完成状态
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
-            doBind0(regFuture, channel, localAddress, promise);
+            doBind0(regFuture, channel, localAddress, promise); // 原生 channel 绑定 localAddress，触发 channel active 事件，同时注册了对 read 事件感兴趣
             return promise;
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
@@ -367,7 +367,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(new Runnable() {
-            @Override
+            @Override  // 并非真正执行任务，只是将 task 添加到了任务队列，另外还启动了 event loop 的线程，成功的话就添加一个 WAKEUP_TASK，否则抛出拒绝执行异常
             public void run() {
                 if (regFuture.isSuccess()) {  // 如果结果不为空，且不为 UNCANCELLABLE 或者是 CauseHolder，就代表 registry 成功了，可以进行 bind 操作了
                     channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);// 添加一个监听器，用于监听 channel bind 的状态

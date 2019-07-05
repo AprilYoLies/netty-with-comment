@@ -19,7 +19,7 @@ import io.netty.util.IntSupplier;
 
 /**
  * Default select strategy.
- */ // 默认的选择策略
+ */ // 默认的选择策略，依据就是有任务执行任务，没有的话就进行选择
 final class DefaultSelectStrategy implements SelectStrategy {
     static final SelectStrategy INSTANCE = new DefaultSelectStrategy();
 

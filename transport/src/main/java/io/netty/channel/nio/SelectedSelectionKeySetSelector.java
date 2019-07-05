@@ -56,9 +56,9 @@ final class SelectedSelectionKeySetSelector extends Selector {
         return delegate.selectNow();
     }
 
-    @Override
+    @Override   // 重置 selectionKeys，原生 selector 进行 select
     public int select(long timeout) throws IOException {
-        selectionKeys.reset();
+        selectionKeys.reset();  // 设置 selectionKeys 为 0，即不对任何事件感兴趣
         return delegate.select(timeout);
     }
 
