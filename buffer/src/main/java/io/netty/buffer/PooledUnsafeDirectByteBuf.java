@@ -65,7 +65,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         memoryAddress = PlatformDependent.directBufferAddress(memory) + offset;
     }
 
-    @Override
+    @Override   // 就是创建的一个 ByteBuffer，但是它共用了 memory 的存储区域
     protected ByteBuffer newInternalNioBuffer(ByteBuffer memory) {
         return memory.duplicate();
     }
@@ -75,8 +75,8 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         return true;
     }
 
-    @Override
-    protected byte _getByte(int index) {
+    @Override   // 获取 byte buf index 位置的字节值
+    protected byte _getByte(int index) {    // addr 方法获取 index 位置的 byte buf 在实例内存中的位置
         return UnsafeByteBufUtil.getByte(addr(index));
     }
 
@@ -278,14 +278,14 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         return UnsafeByteBufUtil.setBytes(this, addr(index), index, in, length);
     }
 
-    @Override
+    @Override   // 获取自身持有的 nio byte buffer，完成相关的变量的设置，从 channel 中读取数据进行填充
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-        checkIndex(index, length);
-        ByteBuffer tmpBuf = internalNioBuffer();
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + length);
+        checkIndex(index, length);  // 检查 index 和 fieldLength 是否会导致越界
+        ByteBuffer tmpBuf = internalNioBuffer();    // 就是创建的一个 ByteBuffer（nio），但是它共用了 memory 的存储区域
+        index = idx(index); // 返回实际的 index，加上了 offset 量
+        tmpBuf.clear().position(index).limit(index + length);   // 清空 byte buffer 相关的变量，重新设置 position 和 limit
         try {
-            return in.read(tmpBuf);
+            return in.read(tmpBuf); // 读取内容到 byte buffer 中
         } catch (ClosedChannelException ignored) {
             return -1;
         }
@@ -358,7 +358,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         ensureAccessible();
         return memoryAddress;
     }
-
+    // 获取 index 位置的 byte buf 在实例内存中的位置
     private long addr(int index) {
         return memoryAddress + index;
     }

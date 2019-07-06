@@ -59,7 +59,7 @@ public final class MathUtil {
      * @param capacity The capacity that {@code index + length} is allowed to be within.
      * @return {@code true} if the requested {@code index} and {@code length} will fit within {@code capacity}.
      * {@code false} if this would result in an index out of bounds exception.
-     */
+     */ // 检查 index 位置填充 length 长度数据是否会超出边界
     public static boolean isOutOfBounds(int index, int length, int capacity) {
         return (index | length | (index + length) | (capacity - (index + length))) < 0;
     }

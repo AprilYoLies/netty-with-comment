@@ -131,7 +131,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         return javaChannel().socket().isOutputShutdown() || !isActive();
     }
 
-    @Override
+    @Override   // 判断 socket 是否是 InputShutdown 或者是非激活状态
     public boolean isInputShutdown() {
         return javaChannel().socket().isInputShutdown() || !isActive();
     }
@@ -188,7 +188,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         return shutdownInput(newPromise());
     }
 
-    @Override
+    @Override   // 判断 socket 是否是 InputShutdown 或者是非激活状态
     protected boolean isInputShutdown0() {
         return isInputShutdown();
     }
@@ -340,12 +340,12 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         javaChannel().close(); // 关闭 nio 原生 channel
     }
 
-    @Override
+    @Override   // 根本就是向当前 byte buf 持有的 byte buffer 读取了指定长度的数据，再设置了当前 byte buf 的 writer index（此过程操作的数据长度由 RecvByteBufAllocator.Handle 决定）
     protected int doReadBytes(ByteBuf byteBuf) throws Exception {
         final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
-        allocHandle.attemptedBytesRead(byteBuf.writableBytes());
-        return byteBuf.writeBytes(javaChannel(), allocHandle.attemptedBytesRead());
-    }
+        allocHandle.attemptedBytesRead(byteBuf.writableBytes());    // 设置 attemptedBytesRead 为参数值
+        return byteBuf.writeBytes(javaChannel(), allocHandle.attemptedBytesRead());  // 空间检查，然后向当前 byte buf 持有的 byte buffer 读取了指定长度的数据，再设置了当前 byte buf 的 writer index
+    }    // 空间检查，然后向当前 byte buf 持有的 byte buffer 读取了指定长度的数据，再设置了当前 byte buf 的 writer index
 
     @Override
     protected int doWriteBytes(ByteBuf buf) throws Exception {

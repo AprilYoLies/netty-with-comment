@@ -53,17 +53,17 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     public final AbstractByteBuf unwrap() {
         return rootParent;
     }
-
+    // 缓存了父 byte buf 的信息，设置了引用计数值，保存了一些参数变量的值
     final <U extends AbstractPooledDerivedByteBuf> U init(
             AbstractByteBuf unwrapped, ByteBuf wrapped, int readerIndex, int writerIndex, int maxCapacity) {
-        wrapped.retain(); // Retain up front to ensure the parent is accessible before doing more work.
+        wrapped.retain(); // Retain up front to ensure the parent is accessible before doing more work.  // 就是将 byte buf 的引用数设置为参数的两倍，还会涉及到越界的检查
         parent = wrapped;
         rootParent = unwrapped;
 
         try {
-            maxCapacity(maxCapacity);
-            setIndex0(readerIndex, writerIndex); // It is assumed the bounds checking is done by the caller.
-            setRefCnt(1);
+            maxCapacity(maxCapacity);   // 指定最大容量
+            setIndex0(readerIndex, writerIndex); // It is assumed the bounds checking is done by the caller.    // 指定读写指针位置
+            setRefCnt(1);   // 设置引用计数值
 
             @SuppressWarnings("unchecked")
             final U castThis = (U) this;

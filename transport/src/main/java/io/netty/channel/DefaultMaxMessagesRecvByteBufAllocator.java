@@ -154,7 +154,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
             return attemptedBytesRead;
         }
 
-        @Override
+        @Override   // 设置 attemptedBytesRead 为参数值
         public void attemptedBytesRead(int bytes) {
             attemptedBytesRead = bytes;
         }

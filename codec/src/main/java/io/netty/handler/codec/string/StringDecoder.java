@@ -74,7 +74,7 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf> {
         this.charset = charset;
     }
 
-    @Override
+    @Override   // 进行解码，将解码结果添加到 out 中
     protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
         out.add(msg.toString(charset));
     }

@@ -104,7 +104,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     public static void destroy() {
         slowThreadLocalMap.remove();
     }
-
+    // 获取下一个可用的 index，超出上界后抛异常
     public static int nextVariableIndex() {
         int index = nextIndex.getAndIncrement();
         if (index < 0) {
@@ -248,10 +248,10 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         }
         return cache;
     }
-
+    // 获取 InternalThreadLocalMap 的 typeParameterMatcherFindCache，没有就创建一个
     public Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache() {
         Map<Class<?>, Map<String, TypeParameterMatcher>> cache = typeParameterMatcherFindCache;
-        if (cache == null) {
+        if (cache == null) {    // IdentityHashMap 比较的是内存地址，不管 equals 方法
             typeParameterMatcherFindCache = cache = new IdentityHashMap<Class<?>, Map<String, TypeParameterMatcher>>();
         }
         return cache;
@@ -283,7 +283,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     public void setLocalChannelReaderStackDepth(int localChannelReaderStackDepth) {
         this.localChannelReaderStackDepth = localChannelReaderStackDepth;
     }
-
+    // 获取 indexedVariables 中索引位置为 index 的值
     public Object indexedVariable(int index) {
         Object[] lookup = indexedVariables;
         return index < lookup.length? lookup[index] : UNSET;
@@ -291,13 +291,13 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     /**
      * @return {@code true} if and only if a new thread-local variable has been created
-     */
+     */ // 填充数据，如果空间足够，直接填充，否则扩容后填充
     public boolean setIndexedVariable(int index, Object value) {
-        Object[] lookup = indexedVariables;
-        if (index < lookup.length) {
+        Object[] lookup = indexedVariables; // 内部存储数组
+        if (index < lookup.length) {    // 空间足够直接填充
             Object oldValue = lookup[index];
             lookup[index] = value;
-            return oldValue == UNSET;
+            return oldValue == UNSET;   // 这种情况下，通常是原值为设置的情况
         } else {
             expandIndexedVariableTableAndSet(index, value);
             return true;

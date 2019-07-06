@@ -100,7 +100,7 @@ public final class ByteBufUtil {
 
     /**
      * Allocates a new array if minLength > {@link ByteBufUtil#MAX_TL_ARRAY_LEN}
-     */
+     */ // 如果要获取的字节数组长度小于 MAX_TL_ARRAY_LEN，获取线程本地变量的字节数组，否则通过 PlatformDependent 进行分配
     static byte[] threadLocalTempArray(int minLength) {
         return minLength <= MAX_TL_ARRAY_LEN ? BYTE_ARRAYS.get()
             : PlatformDependent.allocateUninitializedArray(minLength);
@@ -773,7 +773,7 @@ public final class ByteBufUtil {
             }
         }
     }
-
+    // 分配字节数组空间，将 src 中的数据读取到字节数组中，然后根据此字节数组构建字符串
     @SuppressWarnings("deprecation")
     static String decodeString(ByteBuf src, int readerIndex, int len, Charset charset) {
         if (len == 0) {
@@ -782,19 +782,19 @@ public final class ByteBufUtil {
         final byte[] array;
         final int offset;
 
-        if (src.hasArray()) {
+        if (src.hasArray()) {   // 估计就是看内部是否是通过数组进行数据存储的
             array = src.array();
-            offset = src.arrayOffset() + readerIndex;
+            offset = src.arrayOffset() + readerIndex;   // 计算偏移量
         } else {
-            array = threadLocalTempArray(len);
+            array = threadLocalTempArray(len);  // 如果要获取的字节数组长度小于 MAX_TL_ARRAY_LEN，获取线程本地变量的字节数组，否则通过 PlatformDependent 进行分配
             offset = 0;
-            src.getBytes(readerIndex, array, 0, len);
+            src.getBytes(readerIndex, array, 0, len);   // 从 src 中读取字节数据到 array 中
         }
         if (CharsetUtil.US_ASCII.equals(charset)) {
             // Fast-path for US-ASCII which is used frequently.
-            return new String(array, 0, offset, len);
+            return new String(array, 0, offset, len);   // 构建字符串
         }
-        return new String(array, offset, len, charset);
+        return new String(array, offset, len, charset); // 构建字符串
     }
 
     /**

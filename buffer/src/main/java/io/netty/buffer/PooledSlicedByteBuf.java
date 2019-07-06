@@ -38,18 +38,18 @@ final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
             return new PooledSlicedByteBuf(handle);
         }
     };
-
+    // 尝试从 RECYCLER 中获取 PooledSlicedByteBuf，缓存了父 byte buf 的信息，设置了引用计数值，保存了一些参数变量的值
     static PooledSlicedByteBuf newInstance(AbstractByteBuf unwrapped, ByteBuf wrapped,
                                            int index, int length) {
-        checkSliceOutOfBounds(index, length, unwrapped);
-        return newInstance0(unwrapped, wrapped, index, length);
+        checkSliceOutOfBounds(index, length, unwrapped);    // 检查 index 位置切片 length 长度数据是否会超出边界
+        return newInstance0(unwrapped, wrapped, index, length); // 尝试从 RECYCLER 中获取 PooledSlicedByteBuf，缓存了父 byte buf 的信息，设置了引用计数值，保存了一些参数变量的值
     }
-
+    // 尝试从 RECYCLER 中获取 PooledSlicedByteBuf，缓存了父 byte buf 的信息，设置了引用计数值，保存了一些参数变量的值
     private static PooledSlicedByteBuf newInstance0(AbstractByteBuf unwrapped, ByteBuf wrapped,
                                                     int adjustment, int length) {
-        final PooledSlicedByteBuf slice = RECYCLER.get();
-        slice.init(unwrapped, wrapped, 0, length, length);
-        slice.discardMarks();
+        final PooledSlicedByteBuf slice = RECYCLER.get();   // 尝试从回收器材中拿到 PooledSlicedByteBuf
+        slice.init(unwrapped, wrapped, 0, length, length);  // 缓存了父 byte buf 的信息，设置了引用计数值，保存了一些参数变量的值
+        slice.discardMarks();   // 清空 mark 相关的值
         slice.adjustment = adjustment;
 
         return slice;

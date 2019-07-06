@@ -56,7 +56,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
     /**
      * Create a new instance which will try to detect the types to match out of the type parameter of the class.
      */
-    protected MessageToMessageDecoder() {
+    protected MessageToMessageDecoder() {    // 该方法主要是获取实例 object 和 typeParamName 对应的参数类型，然后根据该类型从线程本地变量中获取对应的 matcher，没有的话就新建并缓存，然后返回
         matcher = TypeParameterMatcher.find(this, MessageToMessageDecoder.class, "I");
     }
 
@@ -77,20 +77,20 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
         return matcher.match(msg);
     }
 
-    @Override
+    @Override   // 对收到的 msg，能进行解码就解码，不能就直接向后传递
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        CodecOutputList out = CodecOutputList.newInstance();
+        CodecOutputList out = CodecOutputList.newInstance();    // 从线程本地变量中获取 CodecOutputLists，然后从中获取 CodecOutputList
         try {
-            if (acceptInboundMessage(msg)) {
+            if (acceptInboundMessage(msg)) {    // 看当前处理器是否处理该 msg
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
                 try {
-                    decode(ctx, cast, out);
+                    decode(ctx, cast, out); // 调用子类的解码逻辑（模板方法模式）
                 } finally {
-                    ReferenceCountUtil.release(cast);
+                    ReferenceCountUtil.release(cast);   // 因为是 byte buf，解码完后需要进行释放
                 }
             } else {
-                out.add(msg);
+                out.add(msg);   // 如果不做处理，就直接将收到的 msg 向后传递
             }
         } catch (DecoderException e) {
             throw e;
@@ -99,9 +99,9 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
         } finally {
             int size = out.size();
             for (int i = 0; i < size; i ++) {
-                ctx.fireChannelRead(out.getUnsafe(i));
+                ctx.fireChannelRead(out.getUnsafe(i));  // 继续向后传递解码出来的结果
             }
-            out.recycle();
+            out.recycle();  // 回收 CodecOutputList（具体的逻辑有待研究）
         }
     }
 

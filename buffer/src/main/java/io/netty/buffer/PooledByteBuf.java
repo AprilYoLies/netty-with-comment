@@ -147,15 +147,15 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         return retainedSlice(index, writerIndex() - index);
     }
 
-    @Override
+    @Override   // 尝试从 RECYCLER 中获取 PooledSlicedByteBuf，缓存了父 byte buf 的信息，设置了引用计数值，保存了一些参数变量的值
     public final ByteBuf retainedSlice(int index, int length) {
-        return PooledSlicedByteBuf.newInstance(this, this, index, length);
+        return PooledSlicedByteBuf.newInstance(this, this, index, length); // 尝试从 RECYCLER 中获取 PooledSlicedByteBuf，缓存了父 byte buf 的信息，设置了引用计数值，保存了一些参数变量的值
     }
-
+    // 就是创建的一个 ByteBuffer，但是它共用了 memory 的存储区域
     protected final ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
-            this.tmpNioBuf = tmpNioBuf = newInternalNioBuffer(memory);
+            this.tmpNioBuf = tmpNioBuf = newInternalNioBuffer(memory);  // 就是创建的一个 ByteBuffer，但是它共用了 memory 的存储区域
         }
         return tmpNioBuf;
     }

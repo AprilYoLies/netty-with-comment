@@ -164,9 +164,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     /**
      * Set read pending to {@code false}.
-     */
+     */ // 清除 readPending 标志
     protected final void clearReadPending() {
-        if (isRegistered()) {
+        if (isRegistered()) {   // 根据是否注册的状态不同，清除 readPending 标志的方式也不同
             EventLoop eventLoop = eventLoop();
             if (eventLoop.inEventLoop()) {
                 clearReadPending0();

@@ -84,11 +84,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     public ChannelMetadata metadata() {
         return METADATA;
     }
-
+    // 判断 socket 是否是 InputShutdown 或者是非激活状态
     final boolean shouldBreakReadReady(ChannelConfig config) {
         return isInputShutdown0() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
     }
-
+    // 判断是否允许 HalfClosure
     private static boolean isAllowHalfClosure(ChannelConfig config) {
         return config instanceof SocketChannelConfig &&
                 ((SocketChannelConfig) config).isAllowHalfClosure();
@@ -128,39 +128,39 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
 
-        @Override
+        @Override   // 这里是对 NioSocketChannel 的 read 事件处理
         public final void read() {
             final ChannelConfig config = config();
-            if (shouldBreakReadReady(config)) {
-                clearReadPending();
+            if (shouldBreakReadReady(config)) { // 判断是否应该终止 read 过程
+                clearReadPending(); // 清除 readPending 标志
                 return;
             }
-            final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
-            final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
-            allocHandle.reset(config);
+            final ChannelPipeline pipeline = pipeline();    // NioSocketChannel 对应的 pipeline
+            final ByteBufAllocator allocator = config.getAllocator();   // byte buf allocator
+            final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();   // allocHandle
+            allocHandle.reset(config);  // 缓存 config，恢复 maxMessagePerRead，totalMessages，totalBytesRead 参数
 
             ByteBuf byteBuf = null;
             boolean close = false;
             try {
                 do {
-                    byteBuf = allocHandle.allocate(allocator);
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
-                    if (allocHandle.lastBytesRead() <= 0) {
+                    byteBuf = allocHandle.allocate(allocator);  // 分配了一个 byte buf
+                    allocHandle.lastBytesRead(doReadBytes(byteBuf));    // 根本就是向当前 byte buf 持有的 byte buffer 读取了指定长度的数据，再设置了当前 byte buf 的 writer index
+                    if (allocHandle.lastBytesRead() <= 0) { // 如果上次读取过程没有读取数据
                         // nothing was read. release the buffer.
-                        byteBuf.release();
+                        byteBuf.release();  // 释放 byte buf
                         byteBuf = null;
-                        close = allocHandle.lastBytesRead() < 0;
+                        close = allocHandle.lastBytesRead() < 0;    // 如果上次读取的是负值，说明读取出错，修改 readPending 的状态
                         if (close) {
                             // There is nothing left to read as we received an EOF.
                             readPending = false;
                         }
                         break;
                     }
-
+                    // 增加计数 totalMessages
                     allocHandle.incMessagesRead(1);
                     readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
+                    pipeline.fireChannelRead(byteBuf);  // 触发 channel read 事件，差不多就是对于接受数据的处理过程了
                     byteBuf = null;
                 } while (allocHandle.continueReading());
 

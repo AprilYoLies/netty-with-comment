@@ -55,21 +55,21 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
         private int currentIdx;
         private int count;
 
-        CodecOutputLists(int numElements) {
+        CodecOutputLists(int numElements) { // 构建 CodecOutputList 数组，大小为大于等于 numElements 的最小的 2 的幂级数
             elements = new CodecOutputList[MathUtil.safeFindNextPositivePowerOfTwo(numElements)];
             for (int i = 0; i < elements.length; ++i) {
                 // Size of 16 should be good enough for the majority of all users as an initial capacity.
-                elements[i] = new CodecOutputList(this, 16);
+                elements[i] = new CodecOutputList(this, 16);    // 创建 CodecOutputList，它持有了 CodecOutputListRecycler，容量为 16
             }
             count = elements.length;
             currentIdx = elements.length;
             mask = elements.length - 1;
         }
-
+        // 从预创建的 16 个 CodecOutputList 中获取一个，或者创建不会被回收的容量为 4 的 CodecOutputList(NOOP_RECYCLER, 4)
         public CodecOutputList getOrCreate() {
             if (count == 0) {
                 // Return a new CodecOutputList which will not be cached. We use a size of 4 to keep the overhead
-                // low.
+                // low. // 如果预创建的 16 个 CodecOutputList 分配完了，接下来就是新建 CodecOutputList(NOOP_RECYCLER, 4)，容量为 4，不会缓存，不会被回收
                 return new CodecOutputList(NOOP_RECYCLER, 4);
             }
             --count;
@@ -89,9 +89,9 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
             assert count <= elements.length;
         }
     }
-
-    static CodecOutputList newInstance() {
-        return CODEC_OUTPUT_LISTS_POOL.get().getOrCreate();
+    // 从线程本地变量中获取 CodecOutputLists，然后从中获取 CodecOutputList
+    static CodecOutputList newInstance() { // get 方法从线程本地变量中获取 CodecOutputLists
+        return CODEC_OUTPUT_LISTS_POOL.get().getOrCreate(); // getOrCreate 从预创建的 16 个 CodecOutputList 中获取一个，或者创建不会被回收的容量为 4 的 CodecOutputList(NOOP_RECYCLER, 4)
     }
 
     private final CodecOutputListRecycler recycler;

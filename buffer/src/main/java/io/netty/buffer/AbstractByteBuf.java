@@ -96,7 +96,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     public int maxCapacity() {
         return maxCapacity;
     }
-
+    // 指定最大容量
     protected final void maxCapacity(int maxCapacity) {
         this.maxCapacity = maxCapacity;
     }
@@ -177,7 +177,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return writerIndex - readerIndex;
     }
 
-    @Override
+    @Override   // 获取 bytebuf 的可写空间
     public int writableBytes() {
         return capacity() - writerIndex;
     }
@@ -268,31 +268,31 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    @Override
+    @Override   // 检查可访问和空间足够，如果设置了边界检查，那么空间不足就是直接抛异常，而不是进行扩容操作
     public ByteBuf ensureWritable(int minWritableBytes) {
-        checkPositiveOrZero(minWritableBytes, "minWritableBytes");
-        ensureWritable0(minWritableBytes);
+        checkPositiveOrZero(minWritableBytes, "minWritableBytes");  // 检查非负值
+        ensureWritable0(minWritableBytes);  // 检查可访问和空间足够，如果设置了边界检查，那么空间不足就是直接抛异常，而不是进行扩容操作
         return this;
     }
-
+    // 检查可访问和空间足够，如果设置了边界检查，那么空间不足就是直接抛异常，而不是进行扩容操作
     final void ensureWritable0(int minWritableBytes) {
         ensureAccessible();
         if (minWritableBytes <= writableBytes()) {
             return;
         }
-        if (checkBounds) {
-            if (minWritableBytes > maxCapacity - writerIndex) {
+        if (checkBounds) {  // 如果设置了边界检查，那么空间不足就是直接抛异常，而不是进行扩容操作
+            if (minWritableBytes > maxCapacity - writerIndex) { // 空间不够，抛异常
                 throw new IndexOutOfBoundsException(String.format(
                         "writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d): %s",
                         writerIndex, minWritableBytes, maxCapacity, this));
             }
         }
 
-        // Normalize the current capacity to the power of 2.
+        // Normalize the current capacity to the power of 2. 计算新的空间容量，通常是扩大为现在的两倍
         int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
 
         // Adjust to the new capacity.
-        capacity(newCapacity);
+        capacity(newCapacity);  // 扩容
     }
 
     @Override
@@ -875,10 +875,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return slice;
     }
 
-    @Override
+    @Override   // 从当前 byte buf 读取出一个长度为 length 的 byte buf，修正当前 byte buf 的 reader index
     public ByteBuf readRetainedSlice(int length) {
-        checkReadableBytes(length);
-        ByteBuf slice = retainedSlice(readerIndex, length);
+        checkReadableBytes(length); // 检查数据读取是否超出边界，如果设置了检查边界标志，那么超出边界后就会抛出异常
+        ByteBuf slice = retainedSlice(readerIndex, length); // 尝试从 RECYCLER 中获取 PooledSlicedByteBuf，缓存了父 byte buf 的信息，设置了引用计数值，保存了一些参数变量的值
         readerIndex += length;
         return slice;
     }
@@ -1119,12 +1119,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return writtenBytes;
     }
 
-    @Override
+    @Override   // 空间检查，然后向当前 byte buf 持有的 byte buffer 读取了指定长度的数据，再设置了当前 byte buf 的 writer index
     public int writeBytes(ScatteringByteChannel in, int length) throws IOException {
-        ensureWritable(length);
-        int writtenBytes = setBytes(writerIndex, in, length);
+        ensureWritable(length); // 检查可访问和空间足够，如果设置了边界检查，那么空间不足就是直接抛异常，而不是进行扩容操作
+        int writtenBytes = setBytes(writerIndex, in, length);   // 获取自身持有的 nio byte buffer，完成相关变量的设置，从 channel 中读取数据进行填充
         if (writtenBytes > 0) {
-            writerIndex += writtenBytes;
+            writerIndex += writtenBytes;    // 设置填充数据后的 writer index
         }
         return writtenBytes;
     }
@@ -1229,14 +1229,14 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return nioBuffers(readerIndex, readableBytes());
     }
 
-    @Override
+    @Override   // 分配字节数组空间，将 src 中的数据读取到字节数组中，然后根据此字节数组构建字符串
     public String toString(Charset charset) {
         return toString(readerIndex, readableBytes(), charset);
     }
 
-    @Override
+    @Override   // 分配字节数组空间，将 src 中的数据读取到字节数组中，然后根据此字节数组构建字符串
     public String toString(int index, int length, Charset charset) {
-        return ByteBufUtil.decodeString(this, index, length, charset);
+        return ByteBufUtil.decodeString(this, index, length, charset);  // 分配字节数组空间，将 src 中的数据读取到字节数组中，然后根据此字节数组构建字符串
     }
 
     @Override
@@ -1275,19 +1275,19 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    @Override
+    @Override   // 检查 index 和 fieldLength 是否会导致越界，从 index 位置往后，找到符合 processor 期望的字节值，返回该字节的索引号
     public int forEachByte(int index, int length, ByteProcessor processor) {
-        checkIndex(index, length);
-        try {
+        checkIndex(index, length);  // 检查 index 和 fieldLength 是否会导致越界
+        try {   // 从 index 位置往后，找到符合 processor 期望的字节值，返回该字节的索引号
             return forEachByteAsc0(index, index + length, processor);
         } catch (Exception e) {
             PlatformDependent.throwException(e);
             return -1;
         }
     }
-
+    // 从 start 位置往后，找到符合 processor 期望的字节值，返回该字节的索引号
     int forEachByteAsc0(int start, int end, ByteProcessor processor) throws Exception {
-        for (; start < end; ++start) {
+        for (; start < end; ++start) {  // _getByte 方法获取 byte buf index 位置的字节值
             if (!processor.process(_getByte(start))) {
                 return start;
             }
@@ -1368,19 +1368,19 @@ public abstract class AbstractByteBuf extends ByteBuf {
     protected final void checkIndex(int index) {
         checkIndex(index, 1);
     }
-
+    // 检查 index 和 fieldLength 是否会导致越界
     protected final void checkIndex(int index, int fieldLength) {
         ensureAccessible();
-        checkIndex0(index, fieldLength);
+        checkIndex0(index, fieldLength);    // 检查 index 和 fieldLength 是否会导致越界
     }
-
+    // 检查 index 位置填充 length 长度数据是否会超出边界，如果超出了就抛出异常
     private static void checkRangeBounds(final int index, final int fieldLength, final int capacity) {
-        if (isOutOfBounds(index, fieldLength, capacity)) {
+        if (isOutOfBounds(index, fieldLength, capacity)) {  // 检查 index 位置填充 length 长度数据是否会超出边界
             throw new IndexOutOfBoundsException(String.format(
                     "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity));
         }
     }
-
+    // 检查 index 和 fieldLength 是否会导致越界
     final void checkIndex0(int index, int fieldLength) {
         if (checkBounds) {
             checkRangeBounds(index, fieldLength, capacity());
@@ -1405,10 +1405,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
      * Throws an {@link IndexOutOfBoundsException} if the current
      * {@linkplain #readableBytes() readable bytes} of this buffer is less
      * than the specified value.
-     */
+     */ // 检查数据读取是否超出边界，如果设置了检查边界标志，那么超出边界后就会抛出异常
     protected final void checkReadableBytes(int minimumReadableBytes) {
         checkPositiveOrZero(minimumReadableBytes, "minimumReadableBytes");
-        checkReadableBytes0(minimumReadableBytes);
+        checkReadableBytes0(minimumReadableBytes);  // 检查数据读取是否超出边界，如果设置了检查边界标志，那么超出边界后就会抛出异常
     }
 
     protected final void checkNewCapacity(int newCapacity) {
@@ -1420,10 +1420,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
             }
         }
     }
-
+    // 检查数据读取是否超出边界，如果设置了检查边界标志，那么超出边界后就会抛出异常
     private void checkReadableBytes0(int minimumReadableBytes) {
         ensureAccessible();
-        if (checkBounds) {
+        if (checkBounds) {  // 如果设置了检查边界标志，那么超出边界后就会抛出异常
             if (readerIndex > writerIndex - minimumReadableBytes) {
                 throw new IndexOutOfBoundsException(String.format(
                         "readerIndex(%d) + length(%d) exceeds writerIndex(%d): %s",
@@ -1435,7 +1435,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     /**
      * Should be called by every method that tries to access the buffers content to check
      * if the buffer was released before.
-     */
+     */ // 检查可访问
     protected final void ensureAccessible() {
         if (checkAccessible && !isAccessible()) {
             throw new IllegalReferenceCountException(0);

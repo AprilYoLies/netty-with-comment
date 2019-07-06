@@ -99,7 +99,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return pipeline;
     }
 
-    @Override
+    @Override   // 获取 channel 对应的 config 的 allocator
     public ByteBufAllocator alloc() {
         return channel().config().getAllocator();
     }

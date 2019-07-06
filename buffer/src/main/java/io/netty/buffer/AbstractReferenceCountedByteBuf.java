@@ -86,29 +86,29 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
     /**
      * An unsafe operation intended for use by a subclass that sets the reference count of the buffer directly
-     */
+     */ // 设置引用计数值为参数的两倍
     protected final void setRefCnt(int newRefCnt) {
         refCntUpdater.set(this, newRefCnt << 1); // overflow OK here
     }
 
     @Override
     public ByteBuf retain() {
-        return retain0(1);
+        return retain0(1);  // 就是将 byte buf 的引用数设置为参数的两倍，还会涉及到越界的检查
     }
 
     @Override
     public ByteBuf retain(int increment) {
         return retain0(checkPositive(increment, "increment"));
     }
-
+    // 就是将 byte buf 的引用数设置为 increment 的两倍，还会涉及到越界的检查
     private ByteBuf retain0(final int increment) {
         // all changes to the raw count are 2x the "real" change
         int adjustedIncrement = increment << 1; // overflow OK here
-        int oldRef = refCntUpdater.getAndAdd(this, adjustedIncrement);
-        if ((oldRef & 1) != 0) {
+        int oldRef = refCntUpdater.getAndAdd(this, adjustedIncrement);  // 设置当前实例 refCnt 字段的值为 adjustedIncrement
+        if ((oldRef & 1) != 0) {    // 原 byte buf 应该一定是 1
             throw new IllegalReferenceCountException(0, increment);
         }
-        // don't pass 0!
+        // don't pass 0! 这里是引用数越界检查
         if ((oldRef <= 0 && oldRef + adjustedIncrement >= 0)
                 || (oldRef >= 0 && oldRef + adjustedIncrement < oldRef)) {
             // overflow case

@@ -468,9 +468,9 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
     final int idx(int index) {
         return index + adjustment;
     }
-
+    // 检查 index 位置切片 length 长度数据是否会超出边界
     static void checkSliceOutOfBounds(int index, int length, ByteBuf buffer) {
-        if (isOutOfBounds(index, length, buffer.capacity())) {
+        if (isOutOfBounds(index, length, buffer.capacity())) {  // 检查 index 位置填充 length 长度数据是否会超出边界
             throw new IndexOutOfBoundsException(buffer + ".slice(" + index + ", " + length + ')');
         }
     }

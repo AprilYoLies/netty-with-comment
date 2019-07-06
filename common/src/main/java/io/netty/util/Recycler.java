@@ -112,7 +112,7 @@ public abstract class Recycler<T> {
         @Override
         protected Stack<T> initialValue() {
             return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacityPerThread, maxSharedCapacityFactor,
-                    ratioMask, maxDelayedQueuesPerThread);
+                    ratioMask, maxDelayedQueuesPerThread);  // 这里说明 Stack 持有了 Recycler，当前线程，以及 Recycler 的四个字段属性值
         }
 
         @Override
@@ -140,7 +140,7 @@ public abstract class Recycler<T> {
 
     protected Recycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
                        int ratio, int maxDelayedQueuesPerThread) {
-        ratioMask = safeFindNextPositivePowerOfTwo(ratio) - 1;
+        ratioMask = safeFindNextPositivePowerOfTwo(ratio) - 1;  // 任务比
         if (maxCapacityPerThread <= 0) {
             this.maxCapacityPerThread = 0;
             this.maxSharedCapacityFactor = 1;
@@ -154,10 +154,10 @@ public abstract class Recycler<T> {
 
     @SuppressWarnings("unchecked")
     public final T get() {
-        if (maxCapacityPerThread == 0) {
+        if (maxCapacityPerThread == 0) {    // 这里应该是线程不允许回收的情况
             return newObject((Handle<T>) NOOP_HANDLE);
         }
-        Stack<T> stack = threadLocal.get();
+        Stack<T> stack = threadLocal.get(); // 获取 threadLocal 的 index 对应的那个元素
         DefaultHandle<T> handle = stack.pop();
         if (handle == null) {
             handle = stack.newHandle();
