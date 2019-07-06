@@ -33,7 +33,7 @@ public final class DefaultMessageSizeEstimator implements MessageSizeEstimator {
             this.unknownSize = unknownSize;
         }
 
-        @Override
+        @Override   // 根据 msg 的类型，确定分配空间的大小值
         public int size(Object msg) {
             if (msg instanceof ByteBuf) {
                 return ((ByteBuf) msg).readableBytes();

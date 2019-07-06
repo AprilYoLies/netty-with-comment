@@ -864,26 +864,26 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        @Override
+        @Override   // 检查 outboundBuffer 的状态，对 msg 进行过滤，用 Entry 承载待发送 msg，然后将相关的变量指向创建的 entry，最后更新将要数据字段的值
         public final void write(Object msg, ChannelPromise promise) {
             assertEventLoop();
 
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
-            if (outboundBuffer == null) {
+            if (outboundBuffer == null) {   // 如果 head context 的 byte buffer 为空
                 // If the outboundBuffer is null we know the channel was closed and so
                 // need to fail the future right away. If it is not null the handling of the rest
                 // will be done in flush0()
                 // See https://github.com/netty/netty/issues/2362
-                safeSetFailure(promise, newWriteException(initialCloseCause));
+                safeSetFailure(promise, newWriteException(initialCloseCause));  // 设置 promise 的状态为失败
                 // release message now to prevent resource-leak
-                ReferenceCountUtil.release(msg);
+                ReferenceCountUtil.release(msg);    // 释放 byte buf
                 return;
             }
 
             int size;
-            try {
+            try {   // 对 msg 进行过滤处理，byte buf 就需要保证它是 direct 的，如果也不是 FileRegion，抛出异常
                 msg = filterOutboundMessage(msg);
-                size = pipeline.estimatorHandle().size(msg);
+                size = pipeline.estimatorHandle().size(msg);// 根据 msg 的类型，确定分配空间的大小值，借用到 channel 持有的 estimatorHandle
                 if (size < 0) {
                     size = 0;
                 }
@@ -892,7 +892,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 ReferenceCountUtil.release(msg);
                 return;
             }
-
+            // 就是用 Entry 承载待发送 msg，然后将相关的变量指向创建的 entry，最后更新将要数据字段的值
             outboundBuffer.addMessage(msg, size, promise);
         }
 
@@ -1017,7 +1017,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         /**
          * Marks the specified {@code promise} as failure.  If the {@code promise} is done already, log a message.
-         */
+         */ // 设置 promise 的状态为失败
         protected final void safeSetFailure(ChannelPromise promise, Throwable cause) {
             if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
                 logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);

@@ -435,25 +435,25 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the original one.
      * Note that this method does not create an off-heap copy if the allocation / deallocation cost is too high,
      * but just returns the original {@link ByteBuf}..
-     */
+     */ // 主要是为了将 buf 的内容填充到直接内存区域的 byte buf 中
     protected final ByteBuf newDirectBuffer(ByteBuf buf) {
-        final int readableBytes = buf.readableBytes();
+        final int readableBytes = buf.readableBytes();  // 可读大小
         if (readableBytes == 0) {
             ReferenceCountUtil.safeRelease(buf);
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.EMPTY_BUFFER;   // 长度为 0，直接返回 EMPTY_BUFFER
         }
 
         final ByteBufAllocator alloc = alloc();
-        if (alloc.isDirectBufferPooled()) {
-            ByteBuf directBuf = alloc.directBuffer(readableBytes);
-            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
-            ReferenceCountUtil.safeRelease(buf);
+        if (alloc.isDirectBufferPooled()) { // 如果 alloc 是池化的直接内存区 buffer
+            ByteBuf directBuf = alloc.directBuffer(readableBytes);  // 直接分配指定长度的 byte buf
+            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);    // 将内容填充进去
+            ReferenceCountUtil.safeRelease(buf);    // 释放原 byte buf
             return directBuf;
         }
 
-        final ByteBuf directBuf = ByteBufUtil.threadLocalDirectBuffer();
+        final ByteBuf directBuf = ByteBufUtil.threadLocalDirectBuffer();    // 如果 channel 持有的 alloc 不是直接内存区相关的，尝试从线程本地中获取
         if (directBuf != null) {
-            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);    // 将数据填充后返回
             ReferenceCountUtil.safeRelease(buf);
             return directBuf;
         }

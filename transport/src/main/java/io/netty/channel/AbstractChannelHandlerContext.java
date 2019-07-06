@@ -758,7 +758,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void write(Object msg, boolean flush, ChannelPromise promise) {
         ObjectUtil.checkNotNull(msg, "msg");
         try {
-            if (isNotValidPromise(promise, true)) {
+            if (isNotValidPromise(promise, true)) { // 判断 promise 的有效性
                 ReferenceCountUtil.release(msg);
                 // cancelled
                 return;
@@ -767,7 +767,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             ReferenceCountUtil.release(msg);
             throw e;
         }
-
+        // 获取下一个 outbound context
         AbstractChannelHandlerContext next = findContextOutbound();
         final Object m = pipeline.touch(msg, next);
         EventExecutor executor = next.executor();
@@ -906,7 +906,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } while (!ctx.inbound);
         return ctx;
     }
-
+    // 获取下一个 outbound context
     private AbstractChannelHandlerContext findContextOutbound() {
         AbstractChannelHandlerContext ctx = this;
         do {

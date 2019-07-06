@@ -100,7 +100,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         head.next = tail;
         tail.prev = head;
     }
-
+    // 获取当前 channel 持有的 estimatorHandle
     final MessageSizeEstimator.Handle estimatorHandle() {
         MessageSizeEstimator.Handle handle = estimatorHandle;
         if (handle == null) {
@@ -1363,7 +1363,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             unsafe.write(msg, promise);
-        }
+        }    // 检查 outboundBuffer 的状态，对 msg 进行过滤，用 Entry 承载待发送 msg，然后将相关的变量指向创建的 entry，最后更新将要数据字段的值
 
         @Override
         public void flush(ChannelHandlerContext ctx) {

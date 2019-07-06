@@ -264,14 +264,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         incompleteWrite(writeSpinCount < 0);
     }
 
-    @Override
+    @Override   // 对 msg 进行过滤处理，byte buf 就需要保证它是 direct 的，如果也不是 FileRegion，抛出异常
     protected final Object filterOutboundMessage(Object msg) {
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             if (buf.isDirect()) {
                 return msg;
             }
-
+            // 主要是为了将 buf 的内容填充到直接内存区域的 byte buf 中
             return newDirectBuffer(buf);
         }
 

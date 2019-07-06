@@ -108,24 +108,24 @@ public final class ChannelOutboundBuffer {
     /**
      * Add given message to this {@link ChannelOutboundBuffer}. The given {@link ChannelPromise} will be notified once
      * the message was written.
-     */
+     */ // 就是用 Entry 承载待发送 msg，然后将相关的变量指向创建的 entry，最后更新将要数据字段的值
     public void addMessage(Object msg, int size, ChannelPromise promise) {
-        Entry entry = Entry.newInstance(msg, size, total(msg), promise);
-        if (tailEntry == null) {
+        Entry entry = Entry.newInstance(msg, size, total(msg), promise);    // 尝试从 RECYCLER 中获取 Entry，然后加参数设置给 Entry
+        if (tailEntry == null) {    // tailEntry 为空处理方式
             flushedEntry = null;
         } else {
-            Entry tail = tailEntry;
+            Entry tail = tailEntry; // 不为空就是追加
             tail.next = entry;
         }
-        tailEntry = entry;
-        if (unflushedEntry == null) {
+        tailEntry = entry;  // tailEntry 指向获取的 entry
+        if (unflushedEntry == null) {   // 将 unflushedEntry 也指向获取的 entry
             unflushedEntry = entry;
         }
 
         // increment pending bytes after adding message to the unflushed arrays.
         // See https://github.com/netty/netty/issues/1619
         incrementPendingOutboundBytes(entry.pendingSize, false);
-    }
+    }   // 设置将要发送的总字节数的值，如果这个值超出了上界，还要根据情况触发 channel 可写状态变化事件
 
     /**
      * Add a flush to this {@link ChannelOutboundBuffer}. This means all previous added messages are marked as flushed
@@ -164,15 +164,15 @@ public final class ChannelOutboundBuffer {
     void incrementPendingOutboundBytes(long size) {
         incrementPendingOutboundBytes(size, true);
     }
-
+    // 设置将要发送的总字节数的值，如果这个值超出了上界，还要根据情况触发 channel 可写状态变化事件
     private void incrementPendingOutboundBytes(long size, boolean invokeLater) {
         if (size == 0) {
             return;
         }
-
+        // 更新当前实例的 totalPendingSize 字段值
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
-        if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
-            setUnwritable(invokeLater);
+        if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {   // 如果待发送的数据超过了上限，
+            setUnwritable(invokeLater); // 设置 unwritable 字段的值，如果前后值发生变化，触发 channel 可写状态变化事件
         }
     }
 
@@ -194,7 +194,7 @@ public final class ChannelOutboundBuffer {
             setWritable(invokeLater);
         }
     }
-
+    // 获取 msg 的数据大小
     private static long total(Object msg) {
         if (msg instanceof ByteBuf) {
             return ((ByteBuf) msg).readableBytes();
@@ -583,23 +583,23 @@ public final class ChannelOutboundBuffer {
             }
         }
     }
-
+    // 设置 unwritable 字段的值，如果前后值发生变化，触发 channel 可写状态变化事件
     private void setUnwritable(boolean invokeLater) {
         for (;;) {
             final int oldValue = unwritable;
             final int newValue = oldValue | 1;
-            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {
+            if (UNWRITABLE_UPDATER.compareAndSet(this, oldValue, newValue)) {   // 设置 unwritable 字段的值
                 if (oldValue == 0 && newValue != 0) {
-                    fireChannelWritabilityChanged(invokeLater);
+                    fireChannelWritabilityChanged(invokeLater); // 触发 channel 可写状态变化事件
                 }
                 break;
             }
         }
     }
-
+    // 根据参数触发 channel 可写状态变化事件
     private void fireChannelWritabilityChanged(boolean invokeLater) {
         final ChannelPipeline pipeline = channel.pipeline();
-        if (invokeLater) {
+        if (invokeLater) {  // 异步触发 channel 可写状态变化事件
             Runnable task = fireChannelWritabilityChangedTask;
             if (task == null) {
                 fireChannelWritabilityChangedTask = task = new Runnable() {
@@ -610,7 +610,7 @@ public final class ChannelOutboundBuffer {
                 };
             }
             channel.eventLoop().execute(task);
-        } else {
+        } else {    // 同步触发 channel 可写状态变化事件
             pipeline.fireChannelWritabilityChanged();
         }
     }
@@ -808,9 +808,9 @@ public final class ChannelOutboundBuffer {
         private Entry(Handle<Entry> handle) {
             this.handle = handle;
         }
-
+        // 尝试从 RECYCLER 中获取 Entry，然后加参数设置给 Entry
         static Entry newInstance(Object msg, int size, long total, ChannelPromise promise) {
-            Entry entry = RECYCLER.get();
+            Entry entry = RECYCLER.get();   // 从回收器中获取 Entry
             entry.msg = msg;
             entry.pendingSize = size + CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
             entry.total = total;
