@@ -633,16 +633,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
          *
          * @param cause The cause which may provide rational for the shutdown.
-         */
+         */ // 同步或者异步的 执行关闭任务，设置处理的结果，最后移除 flushedEntry 的第一项，依次更新待发送字节数，释放对应的 entry 项，触发 ChannelOutputShutdownEvent
         private void shutdownOutput(final ChannelPromise promise, Throwable cause) {
-            if (!promise.setUncancellable()) {
+            if (!promise.setUncancellable()) {  // promise 还没被设置过结果
                 return;
             }
 
             final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
                 promise.setFailure(CLOSE_CLOSED_CHANNEL_EXCEPTION);
-                return;
+                return; // outboundBuffer 为空的处理，就是设置异常信息到 promise
             }
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
 
@@ -656,15 +656,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     public void run() {
                         try {
                             // Execute the shutdown.
-                            doShutdownOutput();
-                            promise.setSuccess();
+                            doShutdownOutput(); // 执行关闭任务
+                            promise.setSuccess();   // 设置处理的结果
                         } catch (Throwable err) {
                             promise.setFailure(err);
                         } finally {
                             // Dispatch to the EventLoop
                             eventLoop().execute(new Runnable() {
                                 @Override
-                                public void run() {
+                                public void run() {  // 移除 flushedEntry 的第一项，依次更新待发送字节数，释放对应的 entry 项，触发 ChannelOutputShutdownEvent
                                     closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
                                 }
                             });
@@ -674,21 +674,21 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } else {
                 try {
                     // Execute the shutdown.
-                    doShutdownOutput();
+                    doShutdownOutput(); // 同步的关闭处理
                     promise.setSuccess();
                 } catch (Throwable err) {
                     promise.setFailure(err);
-                } finally {
+                } finally {  // 移除 flushedEntry 的第一项，依次更新待发送字节数，释放对应的 entry 项，触发 ChannelOutputShutdownEvent
                     closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
                 }
             }
         }
-
+        // 移除 flushedEntry 的第一项，依次更新待发送字节数，释放对应的 entry 项，触发 ChannelOutputShutdownEvent
         private void closeOutboundBufferForShutdown(
                 ChannelPipeline pipeline, ChannelOutboundBuffer buffer, Throwable cause) {
-            buffer.failFlushed(cause, false);
-            buffer.close(cause, true);
-            pipeline.fireUserEventTriggered(ChannelOutputShutdownEvent.INSTANCE);
+            buffer.failFlushed(cause, false);   // 获取 flushedEntry 单链表的第一个元素，不为空的情况下，将其从 flushedEntry 单链表移除，还需要确保它的状态是 cancelled
+            buffer.close(cause, true);  // 依次更新待发送字节数，释放对应的 entry 项
+            pipeline.fireUserEventTriggered(ChannelOutputShutdownEvent.INSTANCE);   // 触发 ChannelOutputShutdownEvent
         }
         // 如果是初次调用，就设置一些 promise 的状态关闭 outboundBuffer，同时通过 pipeline 传播一些事件，否则就是直接或者间接（添加监听器）设置处理结果
         private void close(final ChannelPromise promise, final Throwable cause,
@@ -895,53 +895,53 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // 就是用 Entry 承载待发送 msg，然后将相关的变量指向创建的 entry，最后更新将要数据字段的值
             outboundBuffer.addMessage(msg, size, promise);
         }
-
+        // 检查 outboundBuffer 的状态，将 entry 从 unflushedEntry 单链表移到 flushedEntry 单链表
         @Override
         public final void flush() {
             assertEventLoop();
 
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
-            if (outboundBuffer == null) {
+            if (outboundBuffer == null) {   // outboundBuffer 不能为空
                 return;
             }
-
+            // 这里差不多就是一个将 entry 从 unflushedEntry 单链表移到 flushedEntry 单链表的过程（只是修改了头的指向）
             outboundBuffer.addFlush();
-            flush0();
+            flush0();   // 检查 outboundBuffer 的状态，判断 ChannelOutboundBuffer 是有 flushedEntry，如果有就从中提取出 byte buffer，然后将这些 byte buffer 通过 nio 原生 channel 写出去
         }
-
+        // 检查 outboundBuffer 的状态，判断 ChannelOutboundBuffer 是有 flushedEntry，如果有就从中提取出 byte buffer，然后将这些 byte buffer 通过 nio 原生 channel 写出去
         @SuppressWarnings("deprecation")
         protected void flush0() {
-            if (inFlush0) {
+            if (inFlush0) { // 避免同时刷新
                 // Avoid re-entrance
                 return;
             }
-
+            // 检查 outboundBuffer 的状态
             final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null || outboundBuffer.isEmpty()) {
                 return;
             }
-
+            // 设置 flush 的状态，避免同时刷新
             inFlush0 = true;
 
             // Mark all pending write requests as failure if the channel is inactive.
-            if (!isActive()) {
+            if (!isActive()) {  // 确保 channel 是激活的
                 try {
-                    if (isOpen()) {
-                        outboundBuffer.failFlushed(FLUSH0_NOT_YET_CONNECTED_EXCEPTION, true);
-                    } else {
+                    if (isOpen()) { // 打开非激活的异常触发方式
+                        outboundBuffer.failFlushed(FLUSH0_NOT_YET_CONNECTED_EXCEPTION, true); // 获取 flushedEntry 单链表的第一个元素，不为空的情况下，将其从 flushedEntry 单链表移除，还需要确保它的状态是 cancelled
+                    } else {    // 关闭非激活的异常处理方式
                         // Do not trigger channelWritabilityChanged because the channel is closed already.
                         outboundBuffer.failFlushed(newFlush0Exception(initialCloseCause), false);
-                    }
+                    }   // 获取 flushedEntry 单链表的第一个元素，不为空的情况下，将其从 flushedEntry 单链表移除，还需要确保它的状态是 cancelled
                 } finally {
                     inFlush0 = false;
                 }
                 return;
             }
 
-            try {
+            try {   // 这里就是判断 ChannelOutboundBuffer 是有 flushedEntry，如果有就从中提取出 byte buffer，然后将这些 byte buffer 通过 nio 原生 channel 写出去
                 doWrite(outboundBuffer);
             } catch (Throwable t) {
-                if (t instanceof IOException && config().isAutoClose()) {
+                if (t instanceof IOException && config().isAutoClose()) {   // 捕获到 IO 异常，且配置了自动关闭
                     /**
                      * Just call {@link #close(ChannelPromise, Throwable, boolean)} here which will take care of
                      * failing all flushed messages and also ensure the actual close of the underlying transport
@@ -950,13 +950,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                      * This is needed as otherwise {@link #isActive()} , {@link #isOpen()} and {@link #isWritable()}
                      * may still return {@code true} even if the channel should be closed as result of the exception.
                      */
-                    initialCloseCause = t;
+                    initialCloseCause = t;  // 如果是初次调用，就设置一些 promise 的状态关闭 outboundBuffer，同时通过 pipeline 传播一些事件，否则就是直接或者间接（添加监听器）设置处理结果
                     close(voidPromise(), t, newFlush0Exception(t), false);
                 } else {
-                    try {
+                    try {   // 同步或者异步的 执行关闭任务，设置处理的结果，最后移除 flushedEntry 的第一项，依次更新待发送字节数，释放对应的 entry 项，触发 ChannelOutputShutdownEvent
                         shutdownOutput(voidPromise(), t);
                     } catch (Throwable t2) {
-                        initialCloseCause = t;
+                        initialCloseCause = t;  // 如果是初次调用，就设置一些 promise 的状态关闭 outboundBuffer，同时通过 pipeline 传播一些事件，否则就是直接或者间接（添加监听器）设置处理结果
                         close(voidPromise(), t2, newFlush0Exception(t), false);
                     }
                 }

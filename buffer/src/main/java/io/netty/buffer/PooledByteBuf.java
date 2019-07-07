@@ -178,7 +178,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     private void recycle() {
         recyclerHandle.recycle(this);
     }
-
+    // 偏移量修正后的 index
     protected final int idx(int index) {
         return offset + index;
     }

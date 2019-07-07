@@ -328,8 +328,8 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
-        checkIndex(index, length);
-        index = idx(index);
+        checkIndex(index, length);  // 检查 index 和 fieldLength 是否会导致越界
+        index = idx(index); // 偏移量修正后的 index
         return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 

@@ -358,7 +358,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         final long position = region.transferred();
         return region.transferTo(javaChannel(), position);
     }
-
+    // 根据待写和实际已写字节数来调整 MaxBytesPerGatheringWrite 字节数，如果待写和实际写一致，那么按方式 1 处理，否则方式 2 处理
     private void adjustMaxBytesPerGatheringWrite(int attempted, int written, int oldMaxBytesPerGatheringWrite) {
         // By default we track the SO_SNDBUF when ever it is explicitly set. However some OSes may dynamically change
         // SO_SNDBUF (and other characteristics that determine how much data can be written at once) so we should try
@@ -372,67 +372,67 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
     }
 
-    @Override
+    @Override   // 这里就是判断 ChannelOutboundBuffer 是有 flushedEntry，如果有就从中提取出 byte buffer，然后将这些 byte buffer 通过 nio 原生 channel 写出去
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        SocketChannel ch = javaChannel();
-        int writeSpinCount = config().getWriteSpinCount();
-        do {
+        SocketChannel ch = javaChannel();   // nio 原生 channel
+        int writeSpinCount = config().getWriteSpinCount();  // 获取写自旋次数
+        do {    // 就是查看 flushed 计数值是否为 0
             if (in.isEmpty()) {
                 // All written so clear OP_WRITE
-                clearOpWrite();
+                clearOpWrite(); // 验证 SelectionKey 的有效性，然后清除它的 OP_WRITE
                 // Directly return here so incompleteWrite(...) is not called.
-                return;
+                return; // 写完成后直接返回
             }
 
-            // Ensure the pending writes are made of ByteBufs only.
+            // Ensure the pending writes are made of ByteBufs only. // 获取 maxBytesPerGatheringWrite 参数值
             int maxBytesPerGatheringWrite = ((NioSocketChannelConfig) config).getMaxBytesPerGatheringWrite();
-            ByteBuffer[] nioBuffers = in.nioBuffers(1024, maxBytesPerGatheringWrite);
-            int nioBufferCnt = in.nioBufferCount();
+            ByteBuffer[] nioBuffers = in.nioBuffers(1024, maxBytesPerGatheringWrite);   // 这个过程就是依次从 flushedEntry 单链表中提取出对应的 byte buffer，过程中记录了实际将要写的字节数，
+            int nioBufferCnt = in.nioBufferCount(); // 实际要发送的 byte buffer 的个数，和上面的 nioBuffers 数组的长度应该一致
 
             // Always us nioBuffers() to workaround data-corruption.
             // See https://github.com/netty/netty/issues/2761
             switch (nioBufferCnt) {
                 case 0:
                     // We have something else beside ByteBuffers to write so fallback to normal writes.
-                    writeSpinCount -= doWrite0(in);
+                    writeSpinCount -= doWrite0(in); // 不做深入了解
                     break;
                 case 1: {
                     // Only one ByteBuf so use non-gathering write
                     // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
                     // to check if the total size of all the buffers is non-zero.
                     ByteBuffer buffer = nioBuffers[0];
-                    int attemptedBytes = buffer.remaining();
-                    final int localWrittenBytes = ch.write(buffer);
-                    if (localWrittenBytes <= 0) {
-                        incompleteWrite(true);
+                    int attemptedBytes = buffer.remaining();    // byte buffer 剩余内容
+                    final int localWrittenBytes = ch.write(buffer); // nio 原生 channel 的写操作
+                    if (localWrittenBytes <= 0) {   // 成立说明写入操作失败
+                        incompleteWrite(true);   // 根据参数，来决定是设置写标志，还是清除写标志，触发 flush 任务
                         return;
-                    }
+                    }   // 根据待写和实际已写字节数来调整 MaxBytesPerGatheringWrite 字节数，如果待写和实际写一致，那么按方式 1 处理，否则方式 2 处理
                     adjustMaxBytesPerGatheringWrite(attemptedBytes, localWrittenBytes, maxBytesPerGatheringWrite);
-                    in.removeBytes(localWrittenBytes);
-                    --writeSpinCount;
+                    in.removeBytes(localWrittenBytes);  // 这里就是根据实际写和可读数据来更新相关的进度信息，同时将线程本地的 ByteBuffer 数组全部置为 null，重置 nioBufferCount 值
+                    --writeSpinCount;   // 减少写自旋次数
                     break;
                 }
-                default: {
+                default: {  // 这里是处理 nio byte buffer 的数目超过一个的情况
                     // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
                     // to check if the total size of all the buffers is non-zero.
                     // We limit the max amount to int above so cast is safe
-                    long attemptedBytes = in.nioBufferSize();
-                    final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
+                    long attemptedBytes = in.nioBufferSize();   // 待处理字节数
+                    final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);   // nio 原生 channel 的写操作，返回实际写入的字节数
                     if (localWrittenBytes <= 0) {
-                        incompleteWrite(true);
+                        incompleteWrite(true);  // 根据参数，来决定是设置写标志，还是清除写标志，触发 flush 任务
                         return;
-                    }
+                    }   // 根据待写和实际已写字节数来调整 MaxBytesPerGatheringWrite 字节数，如果待写和实际写一致，那么按方式 1 处理，否则方式 2 处理
                     // Casting to int is safe because we limit the total amount of data in the nioBuffers to int above.
                     adjustMaxBytesPerGatheringWrite((int) attemptedBytes, (int) localWrittenBytes,
                             maxBytesPerGatheringWrite);
-                    in.removeBytes(localWrittenBytes);
+                    in.removeBytes(localWrittenBytes);  // 这里就是根据实际写和可读数据来更新相关的进度信息，同时将线程本地的 ByteBuffer 数组全部置为 null，重置 nioBufferCount 值
                     --writeSpinCount;
                     break;
                 }
             }
         } while (writeSpinCount > 0);
 
-        incompleteWrite(writeSpinCount < 0);
+        incompleteWrite(writeSpinCount < 0);    // 根据参数，来决定是设置写标志，还是清除写标志，触发 flush 任务
     }
 
     @Override   // 其实是 NioByteUnsafe 的一种类型

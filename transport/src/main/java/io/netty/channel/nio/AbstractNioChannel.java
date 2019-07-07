@@ -351,13 +351,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
         }
 
-        @Override
+        @Override   // 检查 outboundBuffer 的状态，判断 ChannelOutboundBuffer 是有 flushedEntry，如果有就从中提取出 byte buffer，然后将这些 byte buffer 通过 nio 原生 channel 写出去
         protected final void flush0() {
             // Flush immediately only when there's no pending flush.
             // If there's a pending flush operation, event loop will call forceFlush() later,
             // and thus there's no need to call it now.
-            if (!isFlushPending()) {
-                super.flush0();
+            if (!isFlushPending()) {    // 检查 selectionKey 有效，且对 OP_WRITE 感兴趣
+                super.flush0(); // 检查 outboundBuffer 的状态，判断 ChannelOutboundBuffer 是有 flushedEntry，如果有就从中提取出 byte buffer，然后将这些 byte buffer 通过 nio 原生 channel 写出去
             }
         }
 
@@ -366,7 +366,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // directly call super.flush0() to force a flush now
             super.flush0();
         }
-
+        // 检查 selectionKey 有效，且对 OP_WRITE 感兴趣
         private boolean isFlushPending() {
             SelectionKey selectionKey = selectionKey();
             return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;

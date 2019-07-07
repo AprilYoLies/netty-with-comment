@@ -160,14 +160,14 @@ public class FastThreadLocal<V> {
     /**
      * Returns the current value for the specified thread local map.
      * The specified thread local map must be for the current thread.
-     */
+     */ // 尝试从 threadLocalMap 获取当前 FastThreadLocal 的 index 值对应的元素，没有的话就进行初始化，返回初始化的值
     @SuppressWarnings("unchecked")
     public final V get(InternalThreadLocalMap threadLocalMap) {
         Object v = threadLocalMap.indexedVariable(index);
         if (v != InternalThreadLocalMap.UNSET) {
             return (V) v;
         }
-
+        // 获取初始值，填充到 index 对应的位置去，再将自身添加到 variablesToRemoveIndex 对应的 variablesToRemove set 中，返回初始值
         return initialize(threadLocalMap);
     }
     // 获取初始值，填充到 index 对应的位置去，再将自身添加到 variablesToRemoveIndex 对应的 variablesToRemove set 中，返回初始值

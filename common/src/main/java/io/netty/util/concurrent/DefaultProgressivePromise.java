@@ -53,7 +53,7 @@ public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements P
         return this;
     }
 
-    @Override
+    @Override   // 通知进度和总数的信息
     public boolean tryProgress(long progress, long total) {
         if (total < 0) {
             total = -1;
@@ -63,7 +63,7 @@ public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements P
         } else if (progress < 0 || progress > total || isDone()) {
             return false;
         }
-
+        // 通知进度和总数的信息
         notifyProgressiveListeners(progress, total);
         return true;
     }

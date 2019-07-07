@@ -201,7 +201,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      * @throws Exception if an I/O exception occurs during write.
      */
     protected final int doWrite0(ChannelOutboundBuffer in) throws Exception {
-        Object msg = in.current();
+        Object msg = in.current();  // 就是获取第一个 flushedEntry 的 msg
         if (msg == null) {
             // Directly return here so incompleteWrite(...) is not called.
             return 0;
@@ -213,7 +213,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             if (!buf.isReadable()) {
-                in.remove();
+                in.remove();    // 将第一个 flushedEntry 从列表中移除，设置相关的 promise，释放资源，回收这个 entry
                 return 0;
             }
 
@@ -282,20 +282,20 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         throw new UnsupportedOperationException(
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
-
+    // 根据参数，来决定是设置写标志，还是清除写标志，触发 flush 任务
     protected final void incompleteWrite(boolean setOpWrite) {
         // Did not write completely.
         if (setOpWrite) {
-            setOpWrite();
+            setOpWrite();   // 为 selection key 设置一个 write 感兴趣标志
         } else {
             // It is possible that we have set the write OP, woken up by NIO because the socket is writable, and then
             // use our write quantum. In this case we no longer want to set the write OP because the socket is still
             // writable (as far as we know). We will find out next time we attempt to write if the socket is writable
             // and set the write OP if necessary.
-            clearOpWrite();
+            clearOpWrite(); // 清除写标志
 
             // Schedule flush again later so other tasks can be picked up in the meantime
-            eventLoop().execute(flushTask);
+            eventLoop().execute(flushTask); // 提交 flush 任务
         }
     }
 
@@ -318,7 +318,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      * @return amount       the amount of written bytes
      */
     protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
-
+    // 为 selection key 设置一个 write 感兴趣标志
     protected final void setOpWrite() {
         final SelectionKey key = selectionKey();
         // Check first if the key is still valid as it may be canceled as part of the deregistration
@@ -332,7 +332,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             key.interestOps(interestOps | SelectionKey.OP_WRITE);
         }
     }
-
+    // 验证 SelectionKey 的有效性，然后清除它的 OP_WRITE
     protected final void clearOpWrite() {
         final SelectionKey key = selectionKey();
         // Check first if the key is still valid as it may be canceled as part of the deregistration
