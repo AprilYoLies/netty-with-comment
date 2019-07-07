@@ -698,9 +698,9 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             write(msg, promise);
         }
     }
-
+    // 检查 outboundBuffer 的状态，对 msg 进行过滤，用 Entry 承载待发送 msg，然后将相关的变量指向创建的 entry，最后更新将要数据字段的值
     private void invokeWrite0(Object msg, ChannelPromise promise) {
-        try {
+        try {   // 检查 outboundBuffer 的状态，对 msg 进行过滤，用 Entry 承载待发送 msg，然后将相关的变量指向创建的 entry，最后更新将要数据字段的值
             ((ChannelOutboundHandler) handler()).write(this, msg, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
@@ -733,7 +733,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private void invokeFlush0() {
-        try {
+        try {   // 对于 hander context，就是检查 outboundBuffer 的状态，将 entry 从 unflushedEntry 单链表移到 flushedEntry 单链表,检查 outboundBuffer 的状态，判断 ChannelOutboundBuffer 是有 flushedEntry，如果有就从中提取出 byte buffer，然后将这些 byte buffer 通过 nio 原生 channel 写出去
             ((ChannelOutboundHandler) handler()).flush(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
@@ -747,9 +747,9 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private void invokeWriteAndFlush(Object msg, ChannelPromise promise) {
-        if (invokeHandler()) {
-            invokeWrite0(msg, promise);
-            invokeFlush0();
+        if (invokeHandler()) {  // 检查 handler 的状态是 ADD_COMPLETE 或者是 ADD_PENDING 状态
+            invokeWrite0(msg, promise); // 检查 outboundBuffer 的状态，对 msg 进行过滤，用 Entry 承载待发送 msg，然后将相关的变量指向创建的 entry，最后更新将要数据字段的值
+            invokeFlush0(); // 对于 hander context，就是检查 outboundBuffer 的状态，将 entry 从 unflushedEntry 单链表移到 flushedEntry 单链表,检查 outboundBuffer 的状态，判断 ChannelOutboundBuffer 是有 flushedEntry，如果有就从中提取出 byte buffer，然后将这些 byte buffer 通过 nio 原生 channel 写出去
         } else {
             writeAndFlush(msg, promise);
         }
@@ -919,7 +919,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     public ChannelPromise voidPromise() {
         return channel().voidPromise();
     }
-
+    // 设置 handler 的状态为 REMOVE_COMPLETE
     final void setRemoved() {
         handlerState = REMOVE_COMPLETE;
     }
@@ -951,16 +951,16 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             handler().handlerAdded(this); // 调用 handler 的 handlerAdded 方法
         }
     }
-
+    // 如果 handler 的状态是 ADD_COMPLETE，从 initMap 中移除 ctx，设置 handler 的状态为 REMOVE_COMPLETE
     final void callHandlerRemoved() throws Exception {
         try {
             // Only call handlerRemoved(...) if we called handlerAdded(...) before.
             if (handlerState == ADD_COMPLETE) {
-                handler().handlerRemoved(this);
+                handler().handlerRemoved(this); // 从 initMap 中移除 ctx
             }
         } finally {
             // Mark the handler as removed in any case.
-            setRemoved();
+            setRemoved();   // 设置 handler 的状态为 REMOVE_COMPLETE
         }
     }
 

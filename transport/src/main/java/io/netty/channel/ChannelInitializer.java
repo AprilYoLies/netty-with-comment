@@ -112,12 +112,12 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             if (initChannel(ctx)) { // 调用真正的 channel init 逻辑，同时需要从 pipeline 中移除当前 channel handler 对应的 handler context
 
                 // We are done with init the Channel, removing the initializer now.
-                removeState(ctx);
+                removeState(ctx);   // 从 initMap 中移除 ctx
             }
         }
     }
 
-    @Override
+    @Override   // 从 initMap 中移除 ctx
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         initMap.remove(ctx);
     }
@@ -133,15 +133,15 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
                 exceptionCaught(ctx, cause);
             } finally {
                 ChannelPipeline pipeline = ctx.pipeline(); // 无论结果如果，都需要从 pipeline 中移除 当前 handler context（根据 handler 查找 handler context）
-                if (pipeline.context(this) != null) {
-                    pipeline.remove(this);
+                if (pipeline.context(this) != null) {   // pipeline.context 查找当前 pipeline 中是否有 handler 对应的 context
+                    pipeline.remove(this);  // 从 pipeline 中移除 context，从 initMap 中移除 ctx
                 }
             }
             return true;
         }
         return false;
     }
-
+    // 从 initMap 中移除 ctx
     private void removeState(final ChannelHandlerContext ctx) {
         // The removal may happen in an async fashion if the EventExecutor we use does something funky.
         if (ctx.isRemoved()) {  // 如果 ctx 状态时 removed，从 initMap 移除 ctx

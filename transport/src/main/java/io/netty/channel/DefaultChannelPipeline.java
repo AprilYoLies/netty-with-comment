@@ -416,10 +416,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return StringUtil.simpleClassName(handlerType) + "#0";
     }
 
-    @Override
+    @Override   // 从 pipeline 中移除 context，从 initMap 中移除 ctx
     public final ChannelPipeline remove(ChannelHandler handler) {
-        remove(getContextOrDie(handler));
-        return this;
+        remove(getContextOrDie(handler));   // 查找当前 pipeline 中是否有 handler 对应的 context，然后移除该 context
+        return this;    // 从 pipeline 中移除 context，从 initMap 中移除 ctx
     }
 
     @Override
@@ -452,18 +452,18 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
         return (T) remove((AbstractChannelHandlerContext) ctx).handler();
     }
-
+    // 从 pipeline 中移除 context，从 initMap 中移除 ctx
     private AbstractChannelHandlerContext remove(final AbstractChannelHandlerContext ctx) {
-        assert ctx != head && ctx != tail;
+        assert ctx != head && ctx != tail;  // head 和 tail context 是不允许移除的
 
         synchronized (this) {
-            remove0(ctx);
+            remove0(ctx);   // 从 pipeline 中移除 ctx，就是直接将前后的 context 直接连接即可
 
             // If the registered is false it means that the channel was not registered on an eventloop yet.
             // In this case we remove the context from the pipeline and add a task that will call
             // ChannelHandler.handlerRemoved(...) once the channel is registered.
             if (!registered) {
-                callHandlerCallbackLater(ctx, false);
+                callHandlerCallbackLater(ctx, false);   // 如果还没注册过，延迟调用 HandlerCallback，即将 ctx 封装为 PendingHandlerTask 追加到 pendingHandlerCallbackHead 之后
                 return ctx;
             }
 
@@ -472,16 +472,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        callHandlerRemoved0(ctx);
+                        callHandlerRemoved0(ctx);   // 如果 handler 的状态是 ADD_COMPLETE，从 initMap 中移除 ctx，设置 handler 的状态为 REMOVE_COMPLETE
                     }
                 });
                 return ctx;
             }
-        }
+        }   // 如果 handler 的状态是 ADD_COMPLETE，从 initMap 中移除 ctx，设置 handler 的状态为 REMOVE_COMPLETE
         callHandlerRemoved0(ctx);
         return ctx;
     }
-
+    // 从 pipeline 中移除 ctx，就是直接将前后的 context 直接连接即可
     private static void remove0(AbstractChannelHandlerContext ctx) {
         AbstractChannelHandlerContext prev = ctx.prev;
         AbstractChannelHandlerContext next = ctx.next;
@@ -631,10 +631,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
     }
-
+    // 如果 handler 的状态是 ADD_COMPLETE，从 initMap 中移除 ctx，设置 handler 的状态为 REMOVE_COMPLETE
     private void callHandlerRemoved0(final AbstractChannelHandlerContext ctx) {
         // Notify the complete removal.
-        try {
+        try {   // 如果 handler 的状态是 ADD_COMPLETE，从 initMap 中移除 ctx，设置 handler 的状态为 REMOVE_COMPLETE
             ctx.callHandlerRemoved();
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
@@ -718,20 +718,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return context0(name);
     }
 
-    @Override
+    @Override   // 查找当前 pipeline 中是否有 handler 对应的 context
     public final ChannelHandlerContext context(ChannelHandler handler) {
         if (handler == null) {
             throw new NullPointerException("handler");
         }
 
         AbstractChannelHandlerContext ctx = head.next;
-        for (;;) {
+        for (;;) {  // 这里就是从 head 往后查找 handler 对应的 context
 
             if (ctx == null) {
                 return null;
             }
 
-            if (ctx.handler() == handler) {
+            if (ctx.handler() == handler) { // 如果找到了就返回这个 context
                 return ctx;
             }
 
@@ -1086,9 +1086,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             return ctx;
         }
     }
-
+    // 查找当前 pipeline 中是否有 handler 对应的 context
     private AbstractChannelHandlerContext getContextOrDie(ChannelHandler handler) {
-        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) context(handler);
+        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) context(handler);   // 查找当前 pipeline 中是否有 handler 对应的 context
         if (ctx == null) {
             throw new NoSuchElementException(handler.getClass().getName());
         } else {
@@ -1367,7 +1367,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void flush(ChannelHandlerContext ctx) {
-            unsafe.flush();
+            unsafe.flush(); // 检查 outboundBuffer 的状态，将 entry 从 unflushedEntry 单链表移到 flushedEntry 单链表,检查 outboundBuffer 的状态，判断 ChannelOutboundBuffer 是有 flushedEntry，如果有就从中提取出 byte buffer，然后将这些 byte buffer 通过 nio 原生 channel 写出去
         }
 
         @Override
@@ -1377,7 +1377,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) {
-            invokeHandlerAddedIfNeeded();
+            invokeHandlerAddedIfNeeded();   // 根据 firstRegistration 状态来决定是否调用 PendingHandlerCallback 链的 execute 方法
             ctx.fireChannelRegistered();
         }
 
@@ -1417,7 +1417,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         // 如果 channel 别设置为 auto read，那么就调用 channel 的 read 方法
         private void readIfIsAutoRead() {
             if (channel.config().isAutoRead()) {
-                channel.read();
+                channel.read(); // 其实好像不管是 NioServerSocketChannel 还是 NioSocketChannel，都只是注册了对读事件感兴趣
             }
         }
 
@@ -1458,7 +1458,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         void execute() { // 获取 context 持有的 handler，调用 handler 的 handlerAdded 方法，根本是调用 channelInit 方法
             EventExecutor executor = ctx.executor();
             if (executor.inEventLoop()) {
-                callHandlerAdded0(ctx);
+                callHandlerAdded0(ctx); // 获取 context 持有的 handler，调用 handler 的 handlerAdded 方法，根本是调用 channelInit 方法
             } else {
                 try {
                     executor.execute(this);

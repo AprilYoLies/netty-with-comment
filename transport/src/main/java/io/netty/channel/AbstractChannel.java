@@ -895,7 +895,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // 就是用 Entry 承载待发送 msg，然后将相关的变量指向创建的 entry，最后更新将要数据字段的值
             outboundBuffer.addMessage(msg, size, promise);
         }
-        // 检查 outboundBuffer 的状态，将 entry 从 unflushedEntry 单链表移到 flushedEntry 单链表
+        // 检查 outboundBuffer 的状态，将 entry 从 unflushedEntry 单链表移到 flushedEntry 单链表,检查 outboundBuffer 的状态，判断 ChannelOutboundBuffer 是有 flushedEntry，如果有就从中提取出 byte buffer，然后将这些 byte buffer 通过 nio 原生 channel 写出去
         @Override
         public final void flush() {
             assertEventLoop();

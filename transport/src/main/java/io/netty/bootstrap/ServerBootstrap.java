@@ -239,7 +239,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 }
             };
         }
-
+        // 这里确定 msg 是 channel 实例，所以对其强转后添加了一个 childHandler，同时配置了一些 option，另外一个监听器用于确保所得到的 channel 的注册过程正确（不正确就被关闭了）
         @Override
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
