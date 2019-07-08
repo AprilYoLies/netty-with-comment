@@ -669,7 +669,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 int ops = k.interestOps();
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
-
+                // 主要就是验证连接完成性，完成 promise 的状态设置，触发 ChannelActive 事件，设置当前 connectTimeoutFuture 的状态，从 queue 中移除 node 对应的节点
                 unsafe.finishConnect();
             }
 

@@ -239,15 +239,15 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
         return task;
     }
-
+    // 从 queue 中移除 node 对应的节点
     final void removeScheduled(final ScheduledFutureTask<?> task) {
-        if (inEventLoop()) {
+        if (inEventLoop()) {    // 从 queue 中移除 node 对应的节点
             scheduledTaskQueue().removeTyped(task);
         } else {
             execute(new Runnable() {
                 @Override
                 public void run() {
-                    removeScheduled(task);
+                    removeScheduled(task);  // 异步从 queue 中移除 node 对应的节点
                 }
             });
         }

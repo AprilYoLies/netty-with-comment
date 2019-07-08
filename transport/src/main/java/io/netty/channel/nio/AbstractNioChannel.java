@@ -308,11 +308,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
             // because what happened is what happened.
             if (!wasActive && active) {
-                pipeline().fireChannelActive(); // 如果状态从未激活变为了激活太，触发 ChannelActive 事件
+                pipeline().fireChannelActive(); // 如果状态从未激活变为了激活太，触发 ChannelActive 事件，还注册了对 read 事件感兴趣
             }
 
             // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
-            if (!promiseSet) {
+            if (!promiseSet) {  // promise trySuccess 返回 false 情况下成立（即设置结果失败的情况）
                 close(voidPromise());   // 如果是初次调用，就设置一些 promise 的状态关闭 outboundBuffer，同时通过 pipeline 传播一些事件，否则就是直接或者间接（添加监听器）设置处理结果
             }
         }
@@ -328,7 +328,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             closeIfClosed();
         }
 
-        @Override
+        @Override   // 主要就是验证连接完成性，完成 promise 的状态设置，触发 ChannelActive 事件，设置当前 connectTimeoutFuture 的状态，从 queue 中移除 node 对应的节点
         public final void finishConnect() {
             // Note this method is invoked by the event loop only if the connection attempt was
             // neither cancelled nor timed out.
@@ -337,15 +337,15 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
             try {
                 boolean wasActive = isActive();
-                doFinishConnect();
-                fulfillConnectPromise(connectPromise, wasActive);
+                doFinishConnect();  // 验证 nio channel 确实是完成连接了，当且仅当 channel 完成连接返回 true
+                fulfillConnectPromise(connectPromise, wasActive);   // 根据 channel 的状态，对相关的 promise 进行信息的设置，然后根据条件触发 ChannelActive 事件
             } catch (Throwable t) {
                 fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                 // See https://github.com/netty/netty/issues/1770
-                if (connectTimeoutFuture != null) {
-                    connectTimeoutFuture.cancel(false);
+                if (connectTimeoutFuture != null) { // 因为完成 connect 了，所以取消掉 connectTimeoutFuture
+                    connectTimeoutFuture.cancel(false); // 设置当前 future 的状态，从 queue 中移除 node 对应的节点
                 }
                 connectPromise = null;
             }

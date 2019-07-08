@@ -311,7 +311,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return false;
     }
 
-    @Override
+    @Override   // 如果 result 是 CauseHolder 实例，且它持有的内容是 CancellationException 实例，返回 true，否则返回 false
     public boolean isCancelled() {
         return isCancelled0(result);
     }
@@ -747,7 +747,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
     }
-
+    // 如果 result 是 CauseHolder 实例，且它持有的内容是 CancellationException 实例，返回 true，否则返回 false
     private static boolean isCancelled0(Object result) {
         return result instanceof CauseHolder && ((CauseHolder) result).cause instanceof CancellationException;
     }

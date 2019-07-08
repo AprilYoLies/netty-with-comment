@@ -158,10 +158,10 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
      *
      * @param mayInterruptIfRunning this value has no effect in this implementation.
      */
-    @Override
+    @Override   // 设置当前 future 的状态，从 queue 中移除 node 对应的节点
     public boolean cancel(boolean mayInterruptIfRunning) {
-        boolean canceled = super.cancel(mayInterruptIfRunning);
-        if (canceled) {
+        boolean canceled = super.cancel(mayInterruptIfRunning); // 取消的方式就是将结果设置为 CANCELLATION_CAUSE_HOLDER，然后必要的话就通知 waiters
+        if (canceled) { // 从 queue 中移除 node 对应的节点
             ((AbstractScheduledEventExecutor) executor()).removeScheduled(this);
         }
         return canceled;

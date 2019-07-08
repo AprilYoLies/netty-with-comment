@@ -136,17 +136,17 @@ public final class DefaultPriorityQueue<T extends PriorityQueueNode> extends Abs
         return removeTyped(node);
     }
 
-    @Override
+    @Override   // 从 queue 中移除 node 对应的节点
     public boolean removeTyped(T node) {
-        int i = node.priorityQueueIndex(this);
-        if (!contains(node, i)) {
+        int i = node.priorityQueueIndex(this);  // 获取该 node 在队列中的优先级索引
+        if (!contains(node, i)) {   // 检查 queue 中位置 i 对应的节点是否是 node
             return false;
         }
 
-        node.priorityQueueIndex(this, INDEX_NOT_IN_QUEUE);
+        node.priorityQueueIndex(this, INDEX_NOT_IN_QUEUE);  // 这是 node 优先级索引为 -1（无效状态）
         if (--size == 0 || size == i) {
             // If there are no node left, or this is the last node in the array just remove and return.
-            queue[i] = null;
+            queue[i] = null;    // 置空 queue 对应位置的元素
             return true;
         }
 
@@ -234,7 +234,7 @@ public final class DefaultPriorityQueue<T extends PriorityQueueNode> extends Abs
             throw new UnsupportedOperationException("remove");
         }
     }
-
+    // 检查 queue 中位置 i 对应的节点是否是 node
     private boolean contains(PriorityQueueNode node, int i) {
         return i >= 0 && i < size && node.equals(queue[i]);
     }

@@ -322,7 +322,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
     }
 
-    @Override
+    @Override   // 验证 nio channel 确实是完成连接了，当且仅当 channel 完成连接返回 true
     protected void doFinishConnect() throws Exception {
         if (!javaChannel().finishConnect()) {
             throw new Error();
