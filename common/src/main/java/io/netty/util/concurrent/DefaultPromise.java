@@ -286,7 +286,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @SuppressWarnings("unchecked")
-    @Override
+    @Override   // 获取 resolve 的结果
     public V getNow() {
         Object result = this.result;
         if (result instanceof CauseHolder || result == SUCCESS || result == UNCANCELLABLE) {

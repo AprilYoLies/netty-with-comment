@@ -46,7 +46,7 @@ public class TimeClientHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
 		ByteBuf message = null;
-		for (int i = 0; i < 100000; i++) {
+		for (int i = 0; i < 1; i++) {
 			message = Unpooled.buffer(req.length);
 			message.writeBytes(req);
 			ctx.writeAndFlush(message);

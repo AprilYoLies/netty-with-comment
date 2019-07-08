@@ -120,7 +120,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         return (SocketChannel) super.javaChannel();
     }
 
-    @Override
+    @Override   // 确保 nio channel 是打开且连接状态
     public boolean isActive() {
         SocketChannel ch = javaChannel();
         return ch.isOpen() && ch.isConnected();
@@ -301,23 +301,23 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
     }
 
-    @Override
+    @Override   // 根据条件决定是否绑定本地 address，然后进行 nio 原生 channel 连接远端地址的过程
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
-        if (localAddress != null) {
+        if (localAddress != null) { // 绑定本地 ip address
             doBind0(localAddress);
         }
 
         boolean success = false;
-        try {
+        try {   // 这里就是 nio 原生 channel 连接远端地址的过程
             boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
-            if (!connected) {
+            if (!connected) {   // 如果连接未完成，就注册一个连接感兴趣事件
                 selectionKey().interestOps(SelectionKey.OP_CONNECT);
             }
             success = true;
             return connected;
         } finally {
             if (!success) {
-                doClose();
+                doClose();  // 如果连接操作失败，就关闭 nio 原生 channel
             }
         }
     }

@@ -236,29 +236,29 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         public final SelectableChannel ch() {
             return javaChannel();
         }
-
+        // 根据条件决定是否绑定本地 address，然后进行 nio 原生 channel 连接远端地址，如果连接的结果是进行中，那么就对和 connect 相关的 promise 进行缓存设置，添加监听器
         @Override
         public final void connect(
                 final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {  // 第一个条件保证 promise 还没被处理过，第二个条件判断 channel 是否是打开状态，否则设置 promise 状态
                 return;
             }
 
             try {
-                if (connectPromise != null) {
+                if (connectPromise != null) {   // 这里说明已有其他任务进行连接了，避免重复操作，抛出异常
                     // Already a connect in process.
                     throw new ConnectionPendingException();
                 }
-
+                // 确保 nio channel 是打开且连接状态
                 boolean wasActive = isActive();
-                if (doConnect(remoteAddress, localAddress)) {
-                    fulfillConnectPromise(promise, wasActive);
+                if (doConnect(remoteAddress, localAddress)) {   // 根据条件决定是否绑定本地 address，然后进行 nio 原生 channel 连接远端地址的过程
+                    fulfillConnectPromise(promise, wasActive);  // 根据 channel 的状态，对相关的 promise 进行信息的设置，然后根据条件触发 ChannelActive 事件
                 } else {
-                    connectPromise = promise;
-                    requestedRemoteAddress = remoteAddress;
+                    connectPromise = promise;   // 记录 promise，也可通过这个字段知道已经有任务进行了连接操作
+                    requestedRemoteAddress = remoteAddress; // 记录远端地址
 
                     // Schedule connect timeout.
-                    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                    int connectTimeoutMillis = config().getConnectTimeoutMillis();  // 获取连接超时时间
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                             @Override
@@ -272,16 +272,16 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
-
-                    promise.addListener(new ChannelFutureListener() {
+                    // 可以看到这里就是监听器监听 connectPromise 的结果，然后根据此结果设置 connectTimeoutFuture 的状态（用于取消这个任务）
+                    promise.addListener(new ChannelFutureListener() {   // 为 channel promise 设置监听器，用于监听连接的结果
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
-                            if (future.isCancelled()) {
+                            if (future.isCancelled()) { // 如果连接的结果是被取消，那么就取消 connectTimeoutFuture 任务
                                 if (connectTimeoutFuture != null) {
-                                    connectTimeoutFuture.cancel(false);
+                                    connectTimeoutFuture.cancel(false); // 设置 connectTimeoutFuture 的状态
                                 }
                                 connectPromise = null;
-                                close(voidPromise());
+                                close(voidPromise());   // 如果是初次调用，就设置一些 promise 的状态关闭 outboundBuffer，同时通过 pipeline 传播一些事件，否则就是直接或者间接（添加监听器）设置处理结果
                             }
                         }
                     });
@@ -291,7 +291,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 closeIfClosed();
             }
         }
-
+        // 根据 channel 的状态，对相关的 promise 进行信息的设置，然后根据条件触发 ChannelActive 事件
         private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
             if (promise == null) {
                 // Closed via cancellation and the promise has been notified already.
@@ -300,20 +300,20 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
             // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
             // We still need to ensure we call fireChannelActive() in this case.
-            boolean active = isActive();
+            boolean active = isActive();    // 查看 nio 原生 channel 是否是激活状态
 
             // trySuccess() will return false if a user cancelled the connection attempt.
-            boolean promiseSet = promise.trySuccess();
+            boolean promiseSet = promise.trySuccess();  // 通过 field updater 设置 result 字段，完成后通知注册的监听器
 
             // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
             // because what happened is what happened.
             if (!wasActive && active) {
-                pipeline().fireChannelActive();
+                pipeline().fireChannelActive(); // 如果状态从未激活变为了激活太，触发 ChannelActive 事件
             }
 
             // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
             if (!promiseSet) {
-                close(voidPromise());
+                close(voidPromise());   // 如果是初次调用，就设置一些 promise 的状态关闭 outboundBuffer，同时通过 pipeline 传播一些事件，否则就是直接或者间接（添加监听器）设置处理结果
             }
         }
 

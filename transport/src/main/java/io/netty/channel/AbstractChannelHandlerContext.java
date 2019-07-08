@@ -501,17 +501,17 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     public ChannelFuture connect(
             final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
 
-        if (remoteAddress == null) {
+        if (remoteAddress == null) {    // 远端地址不能为空
             throw new NullPointerException("remoteAddress");
         }
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise, false)) {    // 验证 promise 的有效性
             // cancelled
             return promise;
         }
 
         final AbstractChannelHandlerContext next = findContextOutbound();
         EventExecutor executor = next.executor();
-        if (executor.inEventLoop()) {
+        if (executor.inEventLoop()) {   // 对于 head context，就是调用 unsafe 的方法，根据条件决定是否绑定本地 address，然后进行 nio 原生 channel 连接远端地址，如果连接的结果是进行中，那么就对和 connect 相关的 promise 进行缓存设置，添加监听器
             next.invokeConnect(remoteAddress, localAddress, promise);
         } else {
             safeExecute(executor, new Runnable() {

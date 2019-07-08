@@ -34,12 +34,12 @@ import java.util.List;
 public class DefaultNameResolver extends InetNameResolver {
 
     public DefaultNameResolver(EventExecutor executor) {
-        super(executor);
+        super(executor);    // 仅仅是缓存了 executor
     }
 
-    @Override
+    @Override   // 看是否能够通过 hostname 获取对应的 InetAddress，如果成功，promise 将会被设置结果
     protected void doResolve(String inetHost, Promise<InetAddress> promise) throws Exception {
-        try {
+        try {   // 看是否能够通过 hostname 获取对应的 InetAddress，如果成功，promise 将会被设置结果
             promise.setSuccess(SocketUtils.addressByName(inetHost));
         } catch (UnknownHostException e) {
             promise.setFailure(e);

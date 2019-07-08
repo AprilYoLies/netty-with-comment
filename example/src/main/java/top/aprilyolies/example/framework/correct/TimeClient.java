@@ -37,9 +37,11 @@ public class TimeClient {
 		// 配置客户端NIO线程组
 		EventLoopGroup group = new NioEventLoopGroup();
 		try {
-			Bootstrap b = new Bootstrap();
-			b.group(group).channel(NioSocketChannel.class).option(ChannelOption.TCP_NODELAY, true)
-					.handler(new ChannelInitializer<SocketChannel>() {
+			Bootstrap b = new Bootstrap();	// 构造过程中，初始化了 config 字段
+			b.group(group)	// 检查 group 的有效性，缓存 group
+					.channel(NioSocketChannel.class)	// 构建了 NioSocketChannel 对应的 channel factory，然后将其缓存
+					.option(ChannelOption.TCP_NODELAY, true)	// 验证 option 的有效性，然后将其缓存到 option map 中
+					.handler(new ChannelInitializer<SocketChannel>() {	// 验证 handler 的有效性，进行缓存
 						@Override
 						public void initChannel(SocketChannel ch) throws Exception {
 							ch.pipeline().addLast(new LineBasedFrameDecoder(1024));

@@ -56,7 +56,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
     // We use a Set as a ChannelInitializer is usually shared between all Channels in a Bootstrap /
     // ServerBootstrap. This way we can reduce the memory usage compared to use Attributes.
-    private final Set<ChannelHandlerContext> initMap = Collections.newSetFromMap(
+    private final Set<ChannelHandlerContext> initMap = Collections.newSetFromMap(   // 用于记录已经执行的 ChannelInitializer
             new ConcurrentHashMap<ChannelHandlerContext, Boolean>());
 
     /**

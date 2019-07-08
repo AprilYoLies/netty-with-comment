@@ -31,8 +31,8 @@ public final class DefaultAddressResolverGroup extends AddressResolverGroup<Inet
 
     private DefaultAddressResolverGroup() { }
 
-    @Override
+    @Override   // 构建 DefaultNameResolver 实例，然后通过它的  asAddressResolver 方法尝试从缓存中获取 AddressResolver，没有的话就新建一个
     protected AddressResolver<InetSocketAddress> newResolver(EventExecutor executor) throws Exception {
-        return new DefaultNameResolver(executor).asAddressResolver();
+        return new DefaultNameResolver(executor).asAddressResolver();   // asAddressResolver 方法尝试从缓存中获取 AddressResolver，没有的话就新建一个
     }
 }

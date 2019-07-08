@@ -49,7 +49,7 @@ public class TimeServer {
                     .childHandler(new ChildChannelHandler());
             // 绑定端口，同步等待成功
             ChannelFuture f = b.bind(port).sync(); // 这个 sync 的方法就是用于等待 bind 结果的完成
-
+            System.out.println("Time server started.");
             // 等待服务端监听端口关闭
             f.channel().closeFuture().sync();
         } finally {

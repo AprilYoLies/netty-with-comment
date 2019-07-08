@@ -195,7 +195,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return addLast(null, name, handler);
     }
 
-    @Override // 将 handler 封装为 handler context 加入 pipeline，构建 PendingHandlerCallback 封装了 AbstractChannelHandlerContext 以便后续调用初始化
+    @Override // 将 handler 封装为 handler context 加入 pipeline，如果未注册，则构建 PendingHandlerCallback 封装了 AbstractChannelHandlerContext 以便后续调用初始化，否则调用 HandlerAddedInEventLoop
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
@@ -215,11 +215,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
             // 这里是 channel handler 已经注册的情况，那么就立即触发 handler added 事件
             EventExecutor executor = newCtx.executor();
-            if (!executor.inEventLoop()) {
+            if (!executor.inEventLoop()) {  // 设置 context 的状态，异步获取 context 持有的 handler，调用 handler 的 handlerAdded 方法，根本是调用 channelInit 方法
                 callHandlerAddedInEventLoop(newCtx, executor);
                 return this;
             }
-        }
+        }   // 获取 context 持有的 handler，调用 handler 的 handlerAdded 方法，根本是调用 channelInit 方法
         callHandlerAdded0(newCtx);
         return this;
     }
@@ -367,7 +367,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return addLast(null, handler);
     }
 
-    @Override
+    @Override   // 将 handler 封装为 handler context 加入 pipeline，如果未注册，则构建 PendingHandlerCallback 封装了 AbstractChannelHandlerContext 以便后续调用初始化，否则触发 handlerAdded 方法
     public final ChannelPipeline addLast(ChannelHandler... handlers) {
         return addLast(null, handlers);
     }
@@ -1143,12 +1143,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             pending.next = task;
         }
     }
-
+    // 设置 context 的状态，异步获取 context 持有的 handler，调用 handler 的 handlerAdded 方法，根本是调用 channelInit 方法
     private void callHandlerAddedInEventLoop(final AbstractChannelHandlerContext newCtx, EventExecutor executor) {
         newCtx.setAddPending();
         executor.execute(new Runnable() {
             @Override
-            public void run() {
+            public void run() { // 获取 context 持有的 handler，调用 handler 的 handlerAdded 方法，根本是调用 channelInit 方法
                 callHandlerAdded0(newCtx);
             }
         });
@@ -1336,7 +1336,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public void connect(
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress,
-                ChannelPromise promise) {
+                ChannelPromise promise) {   // 根据条件决定是否绑定本地 address，然后进行 nio 原生 channel 连接远端地址，如果连接的结果是进行中，那么就对和 connect 相关的 promise 进行缓存设置，添加监听器
             unsafe.connect(remoteAddress, localAddress, promise);
         }
 

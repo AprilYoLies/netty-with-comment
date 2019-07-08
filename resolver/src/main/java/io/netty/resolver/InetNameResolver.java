@@ -34,19 +34,19 @@ public abstract class InetNameResolver extends SimpleNameResolver<InetAddress> {
      *                 by {@link #resolve(String)}
      */
     protected InetNameResolver(EventExecutor executor) {
-        super(executor);
+        super(executor);    // 仅仅是缓存了 executor
     }
 
     /**
      * Return a {@link AddressResolver} that will use this name resolver underneath.
      * It's cached internally, so the same instance is always returned.
-     */
+     */ // 尝试从缓存中获取 AddressResolver，没有的话就新建一个
     public AddressResolver<InetSocketAddress> asAddressResolver() {
         AddressResolver<InetSocketAddress> result = addressResolver;
         if (result == null) {
             synchronized (this) {
                 result = addressResolver;
-                if (result == null) {
+                if (result == null) {   // InetSocketAddressResolver 的构造函数缓存了 executor 和 nameResolver，构建了 matcher,
                     addressResolver = result = new InetSocketAddressResolver(executor(), this);
                 }
             }

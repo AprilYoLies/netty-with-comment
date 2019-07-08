@@ -51,7 +51,7 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
      * @param executor the {@link EventExecutor} which is used to notify the listeners of the {@link Future} returned
      *                 by {@link #resolve(SocketAddress)}
      * @param addressType the type of the {@link SocketAddress} supported by this resolver
-     */
+     */ // 缓存了 executor，构建了 matcher
     protected AbstractAddressResolver(EventExecutor executor, Class<? extends T> addressType) {
         this.executor = checkNotNull(executor, "executor");
         matcher = TypeParameterMatcher.get(addressType);
@@ -65,20 +65,20 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
         return executor;
     }
 
-    @Override
+    @Override   // 查看是否支持该类型的 SocketAddress
     public boolean isSupported(SocketAddress address) {
         return matcher.match(address);
     }
 
-    @Override
+    @Override   // 检查 address 是否被支持，支持的情况下检查是否被解析过了
     public final boolean isResolved(SocketAddress address) {
-        if (!isSupported(address)) {
+        if (!isSupported(address)) {    // 查看是否支持该类型的 SocketAddress
             throw new UnsupportedAddressTypeException();
         }
 
         @SuppressWarnings("unchecked")
-        final T castAddress = (T) address;
-        return doIsResolved(castAddress);
+        final T castAddress = (T) address;  // 支持的情况下进行强转
+        return doIsResolved(castAddress);   // 检查地址是否被解析过了
     }
 
     /**
@@ -87,26 +87,26 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
      */
     protected abstract boolean doIsResolved(T address);
 
-    @Override
+    @Override   // 检查是否支持被解析，然后进行解析，即看 address 的 hostname 能够被正常解析，解析的结果设置到 promise
     public final Future<T> resolve(SocketAddress address) {
-        if (!isSupported(checkNotNull(address, "address"))) {
+        if (!isSupported(checkNotNull(address, "address"))) {   // 确保支持此 address
             // Address type not supported by the resolver
             return executor().newFailedFuture(new UnsupportedAddressTypeException());
         }
 
-        if (isResolved(address)) {
+        if (isResolved(address)) {  // 如果地址被解析过了
             // Resolved already; no need to perform a lookup
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
-            return executor.newSucceededFuture(cast);
+            return executor.newSucceededFuture(cast);   // 返回一个成功的 future
         }
 
         try {
             @SuppressWarnings("unchecked")
             final T cast = (T) address;
-            final Promise<T> promise = executor().newPromise();
-            doResolve(cast, promise);
-            return promise;
+            final Promise<T> promise = executor().newPromise(); // 构建一个 promise，用于指示 resolve 的结果
+            doResolve(cast, promise);   // 看 cast 的 hostname 能够被正常解析，解析的结果设置到 promise
+            return promise; // 返回 resolve 的结果
         } catch (Exception e) {
             return executor().newFailedFuture(e);
         }

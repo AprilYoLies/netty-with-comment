@@ -50,7 +50,7 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
      * resolved found, this method creates and returns a new resolver instance created by
      * {@link #newResolver(EventExecutor)} so that the new resolver is reused on another
      * {@link #getResolver(EventExecutor)} call with the same {@link EventExecutor}.
-     */
+     */ // 该方法优先根据 executor 从缓存中获取 resolver，没有的话就新建一个，然后为该 executor 添加一个监听器，用于移除 executor 对应的缓存，最后返回新建的 resolver
     public AddressResolver<T> getResolver(final EventExecutor executor) {
         if (executor == null) {
             throw new NullPointerException("executor");
@@ -65,17 +65,17 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
             r = resolvers.get(executor);
             if (r == null) {
                 final AddressResolver<T> newResolver;
-                try {
+                try {   // 构建 DefaultNameResolver 实例，然后通过它的  asAddressResolver 方法尝试从缓存中获取 AddressResolver，没有的话就新建一个
                     newResolver = newResolver(executor);
                 } catch (Exception e) {
                     throw new IllegalStateException("failed to create a new resolver", e);
                 }
-
+                // 缓存 executor 和 resolver 的关系
                 resolvers.put(executor, newResolver);
-                executor.terminationFuture().addListener(new FutureListener<Object>() {
+                executor.terminationFuture().addListener(new FutureListener<Object>() { // 为 executor 添加一个关闭监听器
                     @Override
                     public void operationComplete(Future<Object> future) throws Exception {
-                        synchronized (resolvers) {
+                        synchronized (resolvers) {  // 该监听器的作用是从 resolvers 缓存中移除 executor 和 resolver 的关系
                             resolvers.remove(executor);
                         }
                         newResolver.close();

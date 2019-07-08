@@ -36,7 +36,7 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
     /**
      * @param executor the {@link EventExecutor} which is used to notify the listeners of the {@link Future} returned
      *                 by {@link #resolve(String)}
-     */
+     */ // 仅仅是缓存了 executor
     protected SimpleNameResolver(EventExecutor executor) {
         this.executor = checkNotNull(executor, "executor");
     }
@@ -49,17 +49,17 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
         return executor;
     }
 
-    @Override
+    @Override   // 看是否能够通过 hostname 获取对应的 InetAddress，如果成功，promise 将会被设置结果，返回这个 promise
     public final Future<T> resolve(String inetHost) {
-        final Promise<T> promise = executor().newPromise();
-        return resolve(inetHost, promise);
+        final Promise<T> promise = executor().newPromise(); // 此 promise 是用来被监听的
+        return resolve(inetHost, promise);  // 看是否能够通过 hostname 获取对应的 InetAddress，如果成功，promise 将会被设置结果
     }
 
-    @Override
+    @Override   // 看是否能够通过 hostname 获取对应的 InetAddress，如果成功，promise 将会被设置结果
     public Future<T> resolve(String inetHost, Promise<T> promise) {
         checkNotNull(promise, "promise");
 
-        try {
+        try {   // 看是否能够通过 hostname 获取对应的 InetAddress，如果成功，promise 将会被设置结果
             doResolve(inetHost, promise);
             return promise;
         } catch (Exception e) {

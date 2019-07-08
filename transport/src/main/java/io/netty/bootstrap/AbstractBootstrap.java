@@ -77,7 +77,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * The {@link EventLoopGroup} which is used to handle all the events for the to-be-created
      * {@link Channel}
-     */
+     */ // 检查 group 的有效性，缓存 group
     public B group(EventLoopGroup group) {
         if (group == null) {
             throw new NullPointerException("group");
@@ -166,7 +166,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they got
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
-     */
+     */ // 验证 option 的有效性，然后将其缓存到 option map 中
     public <T> B option(ChannelOption<T> option, T value) {
         if (option == null) {
             throw new NullPointerException("option");
@@ -176,7 +176,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
                 options.remove(option);
             }
         } else {
-            synchronized (options) {
+            synchronized (options) {    // 缓存到 options map 中
                 options.put(option, value);
             }
         }
@@ -206,7 +206,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * Validate all the parameters. Sub-classes may override this, but should
      * call the super method in that case.
-     */
+     */ // 验证 group 和 channelFactory 信息是否已经设置好
     public B validate() {
         if (group == null) {
             throw new IllegalStateException("group not set");
@@ -336,7 +336,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
-        // 这一条主要是获取 server bootstrap 的 config，它持有了 server bootstrap，然后获取 server bootstrap 的 event loop group，从中获取一个 event loop，注册 channel
+        // 这一条主要是获取 server bootstrap 的 config，它持有了 server bootstrap，然后获取 server bootstrap 的 event loop group，从中获取一个 event loop，注册 channel，这个过程中 channel 持有了 NioEventLoop 作为绑定
         ChannelFuture regFuture = config().group().register(channel); // 当前 channel 持有的 nio 原生 channel 向 selector 进行注册，触发当前 channel 对应的 pipeline 的 PendingHandlerCallback 链，完成 channelInit 方法的调用，然后触发 channel registry 事件
         if (regFuture.cause() != null) { // 这里说明注册发生失败，需要对 channel 进行关闭操作
             if (channel.isRegistered()) {
@@ -380,7 +380,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     /**
      * the {@link ChannelHandler} to use for serving the requests.
-     */
+     */ // 验证 handler 的有效性，进行缓存
     public B handler(ChannelHandler handler) {
         if (handler == null) {
             throw new NullPointerException("handler");
@@ -444,11 +444,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     final Map<AttributeKey<?>, Object> attrs() {
         return copiedMap(attrs);
     }
-
+    // 这里就是对 nio 原生 channel 进行相关 option 的设置
     static void setChannelOptions(
             Channel channel, Map<ChannelOption<?>, Object> options, InternalLogger logger) {
         for (Map.Entry<ChannelOption<?>, Object> e: options.entrySet()) {
-            setChannelOption(channel, e.getKey(), e.getValue(), logger);
+            setChannelOption(channel, e.getKey(), e.getValue(), logger);    // 这里就是对 nio 原生 channel 进行相关 option 的设置
         }
     }
     // 这里就是对 nio 原生 channel 进行相关 option 的设置

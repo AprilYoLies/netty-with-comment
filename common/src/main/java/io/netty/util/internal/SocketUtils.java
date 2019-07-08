@@ -73,7 +73,7 @@ public final class SocketUtils {
             throw (IOException) e.getCause();
         }
     }
-
+    // 这里就是 nio 原生 channel 连接远端地址的过程
     public static boolean connect(final SocketChannel socketChannel, final SocketAddress remoteAddress)
             throws IOException {
         try {
@@ -137,13 +137,13 @@ public final class SocketUtils {
             }
         });
     }
-
+    // 看是否能够通过 hostname 获取对应的 InetAddress
     public static InetAddress addressByName(final String hostname) throws UnknownHostException {
         try {
             return AccessController.doPrivileged(new PrivilegedExceptionAction<InetAddress>() {
                 @Override
                 public InetAddress run() throws UnknownHostException {
-                    return InetAddress.getByName(hostname);
+                    return InetAddress.getByName(hostname); // 看是否能够通过 hostname 获取对应的 InetAddress，抛出异常就是失败的
                 }
             });
         } catch (PrivilegedActionException e) {

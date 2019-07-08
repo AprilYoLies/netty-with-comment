@@ -83,7 +83,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
 
     @Override // 原生 channel 注册 selector，完成 handler 的 channelActive 方法的调用，设置结果，进行 listener 的通知，最后触发 channel registry 事件
     public ChannelFuture register(Channel channel) {
-        return next().register(channel);
+        return next().register(channel);    // 将 channel 封装成为 DefaultChannelPromise 进行注册
     }
 
     @Override

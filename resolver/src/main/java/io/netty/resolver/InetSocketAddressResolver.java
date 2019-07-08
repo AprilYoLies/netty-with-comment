@@ -38,9 +38,9 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
      * @param executor the {@link EventExecutor} which is used to notify the listeners of the {@link Future} returned
      *                 by {@link #resolve(java.net.SocketAddress)}
      * @param nameResolver the {@link NameResolver} used for name resolution
-     */
+     */ // 缓存了 executor 和 nameResolver，构建了 matcher,
     public InetSocketAddressResolver(EventExecutor executor, NameResolver<InetAddress> nameResolver) {
-        super(executor, InetSocketAddress.class);
+        super(executor, InetSocketAddress.class);   // 缓存了 executor，构建了 matcher
         this.nameResolver = nameResolver;
     }
 
@@ -49,13 +49,13 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
         return !address.isUnresolved();
     }
 
-    @Override
+    @Override   // 看 unresolvedAddress 的 hostname 能够被正常解析，解析的结果设置到 promise
     protected void doResolve(final InetSocketAddress unresolvedAddress, final Promise<InetSocketAddress> promise)
             throws Exception {
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
         nameResolver.resolve(unresolvedAddress.getHostName())
-                .addListener(new FutureListener<InetAddress>() {
+                .addListener(new FutureListener<InetAddress>() {    // 此监听器用于监听 resolve 的结果，根据解析的结果对 promise 进行设置
                     @Override
                     public void operationComplete(Future<InetAddress> future) throws Exception {
                         if (future.isSuccess()) {

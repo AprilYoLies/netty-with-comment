@@ -32,7 +32,7 @@ import java.util.Map;
 public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>, C extends Channel> {
 
     protected final B bootstrap;
-
+    // 这里说明 config 类持有了 BootStrap 实例
     protected AbstractBootstrapConfig(B bootstrap) {
         this.bootstrap = ObjectUtil.checkNotNull(bootstrap, "bootstrap");
     }
