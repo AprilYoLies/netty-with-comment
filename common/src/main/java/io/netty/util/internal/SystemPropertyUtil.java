@@ -41,9 +41,9 @@ public final class SystemPropertyUtil {
      * {@code key}, while falling back to {@code null} if the property access fails.
      *
      * @return the property value or {@code null}
-     */
+     */ // 获取系统熟悉中 key 对应的值，根据是否有 SecurityManager，获取的方式也不一样
     public static String get(String key) {
-        return get(key, null);
+        return get(key, null);  // 获取系统熟悉中 key 对应的值，根据是否有 SecurityManager，获取的方式也不一样
     }
 
     /**
@@ -54,7 +54,7 @@ public final class SystemPropertyUtil {
      * @return the property value.
      *         {@code def} if there's no such property or if an access to the
      *         specified property is not allowed.
-     */
+     */ // 获取系统熟悉中 key 对应的值，根据是否有 SecurityManager，获取的方式也不一样
     public static String get(final String key, String def) {
         if (key == null) {
             throw new NullPointerException("key");
@@ -65,10 +65,10 @@ public final class SystemPropertyUtil {
 
         String value = null;
         try {
-            if (System.getSecurityManager() == null) {
+            if (System.getSecurityManager() == null) {  // 没有 SecurityManage 就直接调用
                 value = System.getProperty(key);
             } else {
-                value = AccessController.doPrivileged(new PrivilegedAction<String>() {
+                value = AccessController.doPrivileged(new PrivilegedAction<String>() {  // 这种调用方式或获取全部的权限
                     @Override
                     public String run() {
                         return System.getProperty(key);

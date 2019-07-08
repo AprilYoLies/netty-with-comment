@@ -38,7 +38,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     @SuppressWarnings("unchecked")
     protected PooledByteBuf(Recycler.Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
-        super(maxCapacity);
+        super(maxCapacity); // 缓存了 maxCapacity
         this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
     }
 
@@ -69,12 +69,12 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     /**
      * Method must be called before reuse this {@link PooledByteBufAllocator}
-     */
+     */ // 将 byte buf 相关的参数置零
     final void reuse(int maxCapacity) {
-        maxCapacity(maxCapacity);
-        setRefCnt(1);
-        setIndex0(0, 0);
-        discardMarks();
+        maxCapacity(maxCapacity);   // 指定最大容量
+        setRefCnt(1);   // 设置引用次数
+        setIndex0(0, 0);    // 设置读和写指针的值
+        discardMarks(); // 清除 mark 标志的值
     }
 
     @Override

@@ -111,7 +111,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
 
         @Override
         public ByteBuf allocate(ByteBufAllocator alloc) {
-            return alloc.ioBuffer(guess());
+            return alloc.ioBuffer(guess()); // guess 方法获取当前实例的 nextReceiveBufferSize 的值
         }
 
         @Override   // 增加计数 totalMessages

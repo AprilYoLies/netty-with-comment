@@ -20,9 +20,9 @@ import io.netty.util.internal.PlatformDependent;
 import java.nio.ByteBuffer;
 
 class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
-
+    // 这里主要是验证了参数的有效性，然后根据参数用 nio 原生 byte buffer 分配了 byte buffer，最后对其和相关信息进行了缓存
     UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
-        super(alloc, initialCapacity, maxCapacity);
+        super(alloc, initialCapacity, maxCapacity); // 这里主要是验证了参数的有效性，然后根据参数用 nio 原生 byte buffer 分配了 byte buffer，最后对其和相关信息进行了缓存
     }
 
     @Override

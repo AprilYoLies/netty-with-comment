@@ -62,28 +62,28 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
     /**
      * @deprecated There is state for {@link #maxMessagesPerRead()} which is typically based upon channel type.
      */
-    @Deprecated
+    @Deprecated // 根据 minimum 和 maximum 缓存对应的 SIZE_TABLE 索引，另外缓存 initial
     public static final AdaptiveRecvByteBufAllocator DEFAULT = new AdaptiveRecvByteBufAllocator();
-
+    // SIZE_TABLE 从 16 到 512 每次增加 16 逐次递增，之后翻倍增加，这里就是一个从 SIZE_TABLE 获取满足 size 需求，空间最小的 SIZE_TABLE 的索引
     private static int getSizeTableIndex(final int size) {
         for (int low = 0, high = SIZE_TABLE.length - 1;;) {
-            if (high < low) {
+            if (high < low) {   // low 大于 high 返回 low
                 return low;
             }
-            if (high == low) {
+            if (high == low) {  // low 等于 high 返回 high
                 return high;
             }
 
-            int mid = low + high >>> 1;
-            int a = SIZE_TABLE[mid];
-            int b = SIZE_TABLE[mid + 1];
-            if (size > b) {
-                low = mid + 1;
-            } else if (size < a) {
-                high = mid - 1;
-            } else if (size == a) {
+            int mid = low + high >>> 1; // 这是求平均数
+            int a = SIZE_TABLE[mid];    // 获取中位数对应的 SIZE_TABLE 值
+            int b = SIZE_TABLE[mid + 1];    // 比中位数大一的 SIZE_TABLE 值
+            if (size > b) { // 情况一
+                low = mid + 1;  // 取较大索引
+            } else if (size < a) {  // 情况二
+                high = mid - 1; // 取较小索引
+            } else if (size == a) { // 等于中位，取中
                 return mid;
-            } else {
+            } else {    // 处在中间取较大索引
                 return mid + 1;
             }
         }
@@ -93,13 +93,13 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         private final int minIndex;
         private final int maxIndex;
         private int index;
-        private int nextReceiveBufferSize;
+        private int nextReceiveBufferSize;  // 即 initial 大小对应的 SIZE_TABLE 索引值
         private boolean decreaseNow;
-
+        // 缓存了 int minIndex, int maxIndex，同时根据 initial 大小求得对应的 SIZE_TABLE 索引值并缓存
         HandleImpl(int minIndex, int maxIndex, int initial) {
             this.minIndex = minIndex;
             this.maxIndex = maxIndex;
-
+            // SIZE_TABLE 从 16 到 512 每次增加 16 逐次递增，之后翻倍增加，这里就是一个从 SIZE_TABLE 获取满足 size 需求，空间最小的 SIZE_TABLE 的索引
             index = getSizeTableIndex(initial);
             nextReceiveBufferSize = SIZE_TABLE[index];
         }
@@ -116,7 +116,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
             super.lastBytesRead(bytes);
         }
 
-        @Override
+        @Override   // 获取 handler 实例的 nextReceiveBufferSize 的值
         public int guess() {
             return nextReceiveBufferSize;
         }
@@ -151,9 +151,9 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
      * Creates a new predictor with the default parameters.  With the default
      * parameters, the expected buffer size starts from {@code 1024}, does not
      * go down below {@code 64}, and does not go up above {@code 65536}.
-     */
+     */ // 根据 minimum 和 maximum 缓存对应的 SIZE_TABLE 索引，另外缓存 initial
     public AdaptiveRecvByteBufAllocator() {
-        this(DEFAULT_MINIMUM, DEFAULT_INITIAL, DEFAULT_MAXIMUM);
+        this(DEFAULT_MINIMUM, DEFAULT_INITIAL, DEFAULT_MAXIMUM);    // 根据 minimum 和 maximum 缓存对应的 SIZE_TABLE 索引，另外缓存 initial
     }
 
     /**
@@ -162,36 +162,36 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
      * @param minimum  the inclusive lower bound of the expected buffer size
      * @param initial  the initial buffer size when no feed back was received
      * @param maximum  the inclusive upper bound of the expected buffer size
-     */
+     */ // 根据 minimum 和 maximum 缓存对应的 SIZE_TABLE 索引，另外缓存 initial
     public AdaptiveRecvByteBufAllocator(int minimum, int initial, int maximum) {
-        checkPositive(minimum, "minimum");
-        if (initial < minimum) {
+        checkPositive(minimum, "minimum");  // 检查参数为正值
+        if (initial < minimum) {    // 初始值必须大于最小值
             throw new IllegalArgumentException("initial: " + initial);
         }
-        if (maximum < initial) {
+        if (maximum < initial) {    // 初始值必须小于等于最大值
             throw new IllegalArgumentException("maximum: " + maximum);
         }
-
+        // SIZE_TABLE 从 16 到 512 每次增加 16 逐次递增，之后翻倍增加，这里就是一个从 SIZE_TABLE 获取满足 size 需求，空间最小的 SIZE_TABLE 的索引
         int minIndex = getSizeTableIndex(minimum);
-        if (SIZE_TABLE[minIndex] < minimum) {
+        if (SIZE_TABLE[minIndex] < minimum) {   // 确定 minIndex 的值
             this.minIndex = minIndex + 1;
         } else {
-            this.minIndex = minIndex;
+            this.minIndex = minIndex;   // 确定 minIndex 的值
         }
-
+        // SIZE_TABLE 从 16 到 512 每次增加 16 逐次递增，之后翻倍增加，这里就是一个从 SIZE_TABLE 获取满足 size 需求，空间最小的 SIZE_TABLE 的索引
         int maxIndex = getSizeTableIndex(maximum);
         if (SIZE_TABLE[maxIndex] > maximum) {
-            this.maxIndex = maxIndex - 1;
+            this.maxIndex = maxIndex - 1;   // 确定 maxIndex 的值
         } else {
-            this.maxIndex = maxIndex;
+            this.maxIndex = maxIndex;   // 确定 maxIndex 的值
         }
 
         this.initial = initial;
     }
 
     @SuppressWarnings("deprecation")
-    @Override
-    public Handle newHandle() {
+    @Override   // 根据 minIndex, maxIndex, initial 构建 HandleImpl（缓存了 int minIndex, int maxIndex，同时根据 initial 大小求得对应的 SIZE_TABLE 索引值并缓存）
+    public Handle newHandle() { // 缓存了 int minIndex, int maxIndex，同时根据 initial 大小求得对应的 SIZE_TABLE 索引值并缓存
         return new HandleImpl(minIndex, maxIndex, initial);
     }
 

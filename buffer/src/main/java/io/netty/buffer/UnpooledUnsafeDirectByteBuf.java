@@ -49,21 +49,21 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
      *
      * @param initialCapacity the initial capacity of the underlying direct buffer
      * @param maxCapacity     the maximum capacity of the underlying direct buffer
-     */
+     */ // 这里主要是验证了参数的有效性，然后根据参数用 nio 原生 byte buffer 分配了 byte buffer，最后对其和相关信息进行了缓存
     public UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
-        super(maxCapacity);
+        super(maxCapacity); // 缓存了 maxCapacity
         if (alloc == null) {
             throw new NullPointerException("alloc");
         }
-        checkPositiveOrZero(initialCapacity, "initialCapacity");
+        checkPositiveOrZero(initialCapacity, "initialCapacity");    // 初始容量和最大容量都必须大于等于 0
         checkPositiveOrZero(maxCapacity, "maxCapacity");
-        if (initialCapacity > maxCapacity) {
+        if (initialCapacity > maxCapacity) {    // 且大小关系要满足
             throw new IllegalArgumentException(String.format(
                     "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
         }
 
-        this.alloc = alloc;
-        setByteBuffer(allocateDirect(initialCapacity), false);
+        this.alloc = alloc; // allocateDirect 方法通过 nio 的 byte buffer 分配直接内存区的 byte buffer
+        setByteBuffer(allocateDirect(initialCapacity), false);  // setByteBuffer 根据条件决定是否释放之前持有的 buffer，然后将新获取的 byte buffer 和一些相关信息进行缓存
     }
 
     /**
@@ -113,7 +113,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     /**
      * Allocate a new direct {@link ByteBuffer} with the given initialCapacity.
-     */
+     */ // 通过 nio 的 byte buffer 分配直接内存区的 byte buffer
     protected ByteBuffer allocateDirect(int initialCapacity) {
         return ByteBuffer.allocateDirect(initialCapacity);
     }
@@ -124,22 +124,22 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     protected void freeDirect(ByteBuffer buffer) {
         PlatformDependent.freeDirectBuffer(buffer);
     }
-
+    // 根据条件决定是否释放之前持有的 buffer，然后将新获取的 byte buffer 和一些相关信息进行缓存
     final void setByteBuffer(ByteBuffer buffer, boolean tryFree) {
-        if (tryFree) {
+        if (tryFree) {  // 如果尝试释放参数为 true
             ByteBuffer oldBuffer = this.buffer;
             if (oldBuffer != null) {
-                if (doNotFree) {
+                if (doNotFree) {    // 这个应该是设置当前 byte buf 的状态
                     doNotFree = false;
-                } else {
+                } else {    // 释放原来的 byte buffer
                     freeDirect(oldBuffer);
                 }
             }
         }
-        this.buffer = buffer;
-        memoryAddress = PlatformDependent.directBufferAddress(buffer);
+        this.buffer = buffer;   // 缓存获得的 byte buffer
+        memoryAddress = PlatformDependent.directBufferAddress(buffer);  // 通过 jdk 原生 unsafe 获取 object 实例偏移量为 fieldOffset 的 field 的实际物理地址
         tmpNioBuf = null;
-        capacity = buffer.remaining();
+        capacity = buffer.remaining();  // 缓存下容量信息
     }
 
     @Override

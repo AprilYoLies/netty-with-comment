@@ -137,14 +137,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
             final ChannelPipeline pipeline = pipeline();    // NioSocketChannel 对应的 pipeline
             final ByteBufAllocator allocator = config.getAllocator();   // byte buf allocator
-            final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();   // allocHandle
+            final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();   // 根据 minIndex, maxIndex, initial 构建 HandleImpl（缓存了 int minIndex, int maxIndex，同时根据 initial 大小求得对应的 SIZE_TABLE 索引值并缓存）
             allocHandle.reset(config);  // 缓存 config，恢复 maxMessagePerRead，totalMessages，totalBytesRead 参数
 
             ByteBuf byteBuf = null;
             boolean close = false;
             try {
                 do {
-                    byteBuf = allocHandle.allocate(allocator);  // 分配了一个 byte buf
+                    byteBuf = allocHandle.allocate(allocator);  // 分配了一个 byte buf TODO 通过 Handle 分配 byte buf 的过程看不懂
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));    // 根本就是向当前 byte buf 持有的 byte buffer 读取了指定长度的数据，再设置了当前 byte buf 的 writer index
                     if (allocHandle.lastBytesRead() <= 0) { // 如果上次读取过程没有读取数据
                         // nothing was read. release the buffer.

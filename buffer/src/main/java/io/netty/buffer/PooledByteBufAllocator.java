@@ -246,32 +246,32 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         }
 
         int pageShifts = validateAndCalculatePageShifts(pageSize);
-
+        // 对于 heapArenas 的处理
         if (nHeapArena > 0) {
-            heapArenas = newArenaArray(nHeapArena);
+            heapArenas = newArenaArray(nHeapArena); // 新建了 PoolArena 数组
             List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(heapArenas.length);
-            for (int i = 0; i < heapArenas.length; i ++) {
+            for (int i = 0; i < heapArenas.length; i ++) {  // 构建了 heapArenas 数组长度个 HeapArena
                 PoolArena.HeapArena arena = new PoolArena.HeapArena(this,
                         pageSize, maxOrder, pageShifts, chunkSize,
                         directMemoryCacheAlignment);
-                heapArenas[i] = arena;
-                metrics.add(arena);
-            }
+                heapArenas[i] = arena;  // 将构建的 HeapArena 保存到 heapArenas 数组中
+                metrics.add(arena); // metrics 也持有了新构建的 HeapArena
+            }   // 不可变化 metrics 后缓存到当前实例中，由 heapArenaMetrics 持有
             heapArenaMetrics = Collections.unmodifiableList(metrics);
         } else {
             heapArenas = null;
             heapArenaMetrics = Collections.emptyList();
         }
-
+        // 对于 nDirectArena 的处理
         if (nDirectArena > 0) {
-            directArenas = newArenaArray(nDirectArena);
+            directArenas = newArenaArray(nDirectArena); // 新建了 PoolArena 数组
             List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(directArenas.length);
             for (int i = 0; i < directArenas.length; i ++) {
-                PoolArena.DirectArena arena = new PoolArena.DirectArena(
+                PoolArena.DirectArena arena = new PoolArena.DirectArena(    // 构建了 heapArenas 数组长度个 DirectArena
                         this, pageSize, maxOrder, pageShifts, chunkSize, directMemoryCacheAlignment);
-                directArenas[i] = arena;
-                metrics.add(arena);
-            }
+                directArenas[i] = arena;    // 将构建的 DirectArena 保存到 directArenas 数组中
+                metrics.add(arena); // metrics 也持有了新构建的 DirectArena
+            }    // 不可变化 metrics 后缓存到当前实例中，由 directArenaMetrics 持有
             directArenaMetrics = Collections.unmodifiableList(metrics);
         } else {
             directArenas = null;
@@ -280,7 +280,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         metric = new PooledByteBufAllocatorMetric(this);
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked")  // 新建了 PoolArena 数组
     private static <T> PoolArena<T>[] newArenaArray(int size) {
         return new PoolArena[size];
     }
@@ -332,18 +332,18 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         return toLeakAwareBuffer(buf);
     }
 
-    @Override
+    @Override   // 从线程本地变量中获取 PoolThreadCache，从中拿到 arena 进行 byte buf 的分配
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        PoolThreadCache cache = threadCache.get();
-        PoolArena<ByteBuffer> directArena = cache.directArena;
+        PoolThreadCache cache = threadCache.get();  // threadCache 是 PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> 实例，获取线程本地变量
+        PoolArena<ByteBuffer> directArena = cache.directArena;  // 从拿到的 PoolThreadCache 中拿到 directArena
 
         final ByteBuf buf;
-        if (directArena != null) {
+        if (directArena != null) {  // 这里可以看出来 byte buf 的分配是通过 arena 进行的
             buf = directArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
-            buf = PlatformDependent.hasUnsafe() ?
+            buf = PlatformDependent.hasUnsafe() ?   // 这里主要是验证了参数的有效性，然后根据参数用 nio 原生 byte buffer 分配了 byte buffer，最后对其和相关信息进行了缓存
                     UnsafeByteBufUtil.newUnsafeDirectByteBuf(this, initialCapacity, maxCapacity) :
-                    new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+                    new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);  // 这里主要是验证了参数的有效性，然后根据参数用 nio 原生 byte buffer 分配了 byte buffer，最后对其和相关信息进行了缓存
         }
 
         return toLeakAwareBuffer(buf);
@@ -448,14 +448,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             this.useCacheForAllThreads = useCacheForAllThreads;
         }
 
-        @Override
+        @Override   // 获取 leastUsedArena，根据获得的 arena 和 allocator 的相关参数构建 PoolThreadCache 返回
         protected synchronized PoolThreadCache initialValue() {
-            final PoolArena<byte[]> heapArena = leastUsedArena(heapArenas);
-            final PoolArena<ByteBuffer> directArena = leastUsedArena(directArenas);
+            final PoolArena<byte[]> heapArena = leastUsedArena(heapArenas); // 这个过程就是查找 arenas 中，numThreadCaches 最小的 arena
+            final PoolArena<ByteBuffer> directArena = leastUsedArena(directArenas); // 这个过程就是查找 arenas 中，numThreadCaches 最小的 arena
 
             final Thread current = Thread.currentThread();
             if (useCacheForAllThreads || current instanceof FastThreadLocalThread) {
-                final PoolThreadCache cache = new PoolThreadCache(
+                final PoolThreadCache cache = new PoolThreadCache(  // 构建线程池化缓存
                         heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
                         DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
 
@@ -476,14 +476,14 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         protected void onRemoval(PoolThreadCache threadCache) {
             threadCache.free(false);
         }
-
+        // 这个过程就是查找 arenas 中，numThreadCaches 最小的 arena
         private <T> PoolArena<T> leastUsedArena(PoolArena<T>[] arenas) {
-            if (arenas == null || arenas.length == 0) {
+            if (arenas == null || arenas.length == 0) { // 确定 arenas 已经完初始化了，且不为空
                 return null;
             }
 
             PoolArena<T> minArena = arenas[0];
-            for (int i = 1; i < arenas.length; i++) {
+            for (int i = 1; i < arenas.length; i++) {   // 这个过程就是查找 arenas 中，numThreadCaches 最小的 arena
                 PoolArena<T> arena = arenas[i];
                 if (arena.numThreadCaches.get() < minArena.numThreadCaches.get()) {
                     minArena = arena;

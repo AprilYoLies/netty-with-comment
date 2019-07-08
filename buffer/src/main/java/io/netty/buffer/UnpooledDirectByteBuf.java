@@ -48,7 +48,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      *
      * @param initialCapacity the initial capacity of the underlying direct buffer
      * @param maxCapacity     the maximum capacity of the underlying direct buffer
-     */
+     */ // 这里主要是验证了参数的有效性，然后根据参数用 nio 原生 byte buffer 分配了 byte buffer，最后对其和相关信息进行了缓存
     public UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
         if (alloc == null) {
@@ -61,8 +61,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
                     "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
         }
 
-        this.alloc = alloc;
-        setByteBuffer(allocateDirect(initialCapacity));
+        this.alloc = alloc; // allocateDirect 方法通过 nio 的 byte buffer 分配直接内存区的 byte buffer
+        setByteBuffer(allocateDirect(initialCapacity)); // setByteBuffer 根据条件决定是否释放之前持有的 buffer，然后将新获取的 byte buffer 和一些相关信息进行缓存
     }
 
     /**
@@ -99,7 +99,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     /**
      * Allocate a new direct {@link ByteBuffer} with the given initialCapacity.
-     */
+     */ // 通过 nio 的 byte buffer 分配直接内存区的 byte buffer
     protected ByteBuffer allocateDirect(int initialCapacity) {
         return ByteBuffer.allocateDirect(initialCapacity);
     }
@@ -110,20 +110,20 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     protected void freeDirect(ByteBuffer buffer) {
         PlatformDependent.freeDirectBuffer(buffer);
     }
-
+    // 根据条件决定是否释放之前持有的 buffer，然后将新获取的 byte buffer 和一些相关信息进行缓存
     private void setByteBuffer(ByteBuffer buffer) {
         ByteBuffer oldBuffer = this.buffer;
         if (oldBuffer != null) {
-            if (doNotFree) {
+            if (doNotFree) {    // 这个应该是设置当前 byte buf 的状态
                 doNotFree = false;
             } else {
-                freeDirect(oldBuffer);
+                freeDirect(oldBuffer);  // 释放原来的 byte buffer
             }
         }
 
-        this.buffer = buffer;
+        this.buffer = buffer;   // 缓存获得的 byte buffer
         tmpNioBuf = null;
-        capacity = buffer.remaining();
+        capacity = buffer.remaining(); // 缓存下容量信息
     }
 
     @Override

@@ -42,7 +42,7 @@ final class PlatformDependent0 {
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final Method ALLOCATE_ARRAY_METHOD;
     private static final int JAVA_VERSION = javaVersion0();
-    private static final boolean IS_ANDROID = isAndroid0();
+    private static final boolean IS_ANDROID = isAndroid0(); // 根据系统的 java.vm.name 属性值来确定是否是安卓平台
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
     private static final Object INTERNAL_UNSAFE;
@@ -154,18 +154,18 @@ final class PlatformDependent0 {
                 final Unsafe finalUnsafe = unsafe;
 
                 // attempt to access field Buffer#address
-                final Object maybeAddressField = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                final Object maybeAddressField = AccessController.doPrivileged(new PrivilegedAction<Object>() { // 获取 Buffer 的 address 字段
                     @Override
                     public Object run() {
                         try {
                             final Field field = Buffer.class.getDeclaredField("address");
                             // Use Unsafe to read value of the address field. This way it will not fail on JDK9+ which
                             // will forbid changing the access level via reflection.
-                            final long offset = finalUnsafe.objectFieldOffset(field);
-                            final long address = finalUnsafe.getLong(direct, offset);
+                            final long offset = finalUnsafe.objectFieldOffset(field);   // 得到 field 在它所述 object 的偏移量
+                            final long address = finalUnsafe.getLong(direct, offset);   // 通过偏移量计算物理地址
 
                             // if direct really is a direct buffer, address will be non-zero
-                            if (address == 0) {
+                            if (address == 0) { // 返回的地址为 0，说明是直接内存区的 byte buffer
                                 return null;
                             }
                             return field;
@@ -260,7 +260,7 @@ final class PlatformDependent0 {
                 }
             }
             DIRECT_BUFFER_CONSTRUCTOR = directBufferConstructor;
-            ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
+            ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField); // 通过 jdk 原生的 unsafe 得到 field 的偏移位置
             BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
             final boolean unaligned;
             Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
@@ -479,9 +479,9 @@ final class PlatformDependent0 {
             throw new Error(cause);
         }
     }
-
+    // 通过 jdk 原生 unsafe 获取 object 实例偏移量为 fieldOffset 的 field 的实际物理地址
     static long directBufferAddress(ByteBuffer buffer) {
-        return getLong(buffer, ADDRESS_FIELD_OFFSET);
+        return getLong(buffer, ADDRESS_FIELD_OFFSET);   // 通过 jdk 原生 unsafe 获取 object 实例偏移量为 fieldOffset 的 field 的实际物理地址
     }
 
     static long byteArrayBaseOffset() {
@@ -495,11 +495,11 @@ final class PlatformDependent0 {
     static int getInt(Object object, long fieldOffset) {
         return UNSAFE.getInt(object, fieldOffset);
     }
-
+    // 通过 jdk 原生 unsafe 获取 object 实例偏移量为 fieldOffset 的 field 的实际物理地址
     private static long getLong(Object object, long fieldOffset) {
         return UNSAFE.getLong(object, fieldOffset);
     }
-
+    // 通过 jdk 原生的 unsafe 得到 field 的偏移位置
     static long objectFieldOffset(Field field) {
         return UNSAFE.objectFieldOffset(field);
     }
@@ -805,11 +805,11 @@ final class PlatformDependent0 {
     static long reallocateMemory(long address, long newSize) {
         return UNSAFE.reallocateMemory(address, newSize);
     }
-
+    // 根据系统的 java.vm.name 属性值来确定是否是安卓平台
     static boolean isAndroid() {
         return IS_ANDROID;
     }
-
+    // 根据系统的 java.vm.name 属性值来确定是否是安卓平台
     private static boolean isAndroid0() {
         // Idea: Sometimes java binaries include Android classes on the classpath, even if it isn't actually Android.
         // Rather than check if certain classes are present, just check the VM, which is tied to the JDK.
@@ -818,8 +818,8 @@ final class PlatformDependent0 {
         // OpenJDK is used, which means `Unsafe` will actually work as expected.
 
         // Android sets this property to Dalvik, regardless of whether it actually is.
-        String vmName = SystemPropertyUtil.get("java.vm.name");
-        boolean isAndroid = "Dalvik".equals(vmName);
+        String vmName = SystemPropertyUtil.get("java.vm.name"); // 获取系统熟悉中 key 对应的值，根据是否有 SecurityManager，获取的方式也不一样
+        boolean isAndroid = "Dalvik".equals(vmName);    // 看是否是安卓端的 jvm
         if (isAndroid) {
             logger.debug("Platform: Android");
         }

@@ -69,29 +69,29 @@ public final class ByteBufUtil {
 
     static final int WRITE_CHUNK_SIZE = 8192;
     static final ByteBufAllocator DEFAULT_ALLOCATOR;
-
+    // 根据环境设置确定 DEFAULT_ALLOCATOR，THREAD_LOCAL_BUFFER_SIZE，MAX_CHAR_BUFFER_SIZE 三个属性的值
     static {
-        String allocType = SystemPropertyUtil.get(
+        String allocType = SystemPropertyUtil.get(  // 获取系统变量中的 io.netty.allocator.type 属性值，默认情况下根据平台是否是安卓来决定是使用 unpooled 或者是 pooled
                 "io.netty.allocator.type", PlatformDependent.isAndroid() ? "unpooled" : "pooled");
-        allocType = allocType.toLowerCase(Locale.US).trim();
+        allocType = allocType.toLowerCase(Locale.US).trim();    // 小写加修饰获取的 allocType
 
         ByteBufAllocator alloc;
-        if ("unpooled".equals(allocType)) {
+        if ("unpooled".equals(allocType)) { // 根据 allocType 为 alloc 赋值
             alloc = UnpooledByteBufAllocator.DEFAULT;
             logger.debug("-Dio.netty.allocator.type: {}", allocType);
         } else if ("pooled".equals(allocType)) {
             alloc = PooledByteBufAllocator.DEFAULT;
             logger.debug("-Dio.netty.allocator.type: {}", allocType);
         } else {
-            alloc = PooledByteBufAllocator.DEFAULT;
+            alloc = PooledByteBufAllocator.DEFAULT; // 这里说明大部分情况下都是使用的 PooledByteBufAllocator
             logger.debug("-Dio.netty.allocator.type: pooled (unknown: {})", allocType);
         }
 
         DEFAULT_ALLOCATOR = alloc;
-
+        // 从环境中获取 THREAD_LOCAL_BUFFER_SIZE 值
         THREAD_LOCAL_BUFFER_SIZE = SystemPropertyUtil.getInt("io.netty.threadLocalDirectBufferSize", 0);
         logger.debug("-Dio.netty.threadLocalDirectBufferSize: {}", THREAD_LOCAL_BUFFER_SIZE);
-
+        // 从环境中获取 MAX_CHAR_BUFFER_SIZE 值
         MAX_CHAR_BUFFER_SIZE = SystemPropertyUtil.getInt("io.netty.maxThreadLocalCharBufferSize", 16 * 1024);
         logger.debug("-Dio.netty.maxThreadLocalCharBufferSize: {}", MAX_CHAR_BUFFER_SIZE);
     }

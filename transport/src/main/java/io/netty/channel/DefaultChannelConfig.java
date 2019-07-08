@@ -54,8 +54,8 @@ public class DefaultChannelConfig implements ChannelConfig {
                     DefaultChannelConfig.class, WriteBufferWaterMark.class, "writeBufferWaterMark");
 
     protected final Channel channel;
-
-    private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
+    // 根据 ByteBufAllocator.DEFAULT 初始化
+    private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT; // 根据环境设置确定 DEFAULT_ALLOCATOR，THREAD_LOCAL_BUFFER_SIZE，MAX_CHAR_BUFFER_SIZE 三个属性的值
     private volatile RecvByteBufAllocator rcvBufAllocator;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 

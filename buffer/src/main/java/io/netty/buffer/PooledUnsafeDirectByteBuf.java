@@ -30,22 +30,22 @@ import java.nio.channels.ScatteringByteChannel;
 
 final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     private static final Recycler<PooledUnsafeDirectByteBuf> RECYCLER = new Recycler<PooledUnsafeDirectByteBuf>() {
-        @Override
+        @Override   // 类似 thread local 的工作过程，这算是初始值
         protected PooledUnsafeDirectByteBuf newObject(Handle<PooledUnsafeDirectByteBuf> handle) {
             return new PooledUnsafeDirectByteBuf(handle, 0);
         }
     };
-
+    // 从 RECYCLER 中获取 PooledUnsafeDirectByteBuf，然后对其进行相关参数的设置，最后返回这个获得的 PooledUnsafeDirectByteBuf
     static PooledUnsafeDirectByteBuf newInstance(int maxCapacity) {
-        PooledUnsafeDirectByteBuf buf = RECYCLER.get();
-        buf.reuse(maxCapacity);
+        PooledUnsafeDirectByteBuf buf = RECYCLER.get(); // 从线程本地获取 stack，pop 出栈顶元素，如果为空就新建一个，然后设置它的 value 为新建的 PooledUnsafeDirectByteBuf
+        buf.reuse(maxCapacity); // 将 byte buf 相关的参数置零
         return buf;
     }
 
     private long memoryAddress;
 
     private PooledUnsafeDirectByteBuf(Recycler.Handle<PooledUnsafeDirectByteBuf> recyclerHandle, int maxCapacity) {
-        super(recyclerHandle, maxCapacity);
+        super(recyclerHandle, maxCapacity); // 缓存了 maxCapacity 和 recycle handler
     }
 
     @Override

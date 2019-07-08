@@ -439,9 +439,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assert !registered || eventLoop.inEventLoop();
         }
 
-        @Override // 获取 recvHandle，如果没有则进行创建
+        @Override // 获取 recvHandle，如果没有则通过 RecvByteBufAllocator 进行创建
         public RecvByteBufAllocator.Handle recvBufAllocHandle() {
-            if (recvHandle == null) {
+            if (recvHandle == null) {   // 根据 minIndex, maxIndex, initial 构建 HandleImpl（缓存了 int minIndex, int maxIndex，同时根据 initial 大小求得对应的 SIZE_TABLE 索引值并缓存）
                 recvHandle = config().getRecvByteBufAllocator().newHandle();
             }
             return recvHandle;

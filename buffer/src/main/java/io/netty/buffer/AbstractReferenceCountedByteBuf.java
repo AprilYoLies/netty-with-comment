@@ -52,9 +52,9 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     private static int realRefCnt(int rawCnt) {
         return (rawCnt & 1) != 0 ? 0 : rawCnt >>> 1;
     }
-
+    // 缓存了 maxCapacity
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {
-        super(maxCapacity);
+        super(maxCapacity); // 缓存了 maxCapacity
     }
 
     private int nonVolatileRawCnt() {

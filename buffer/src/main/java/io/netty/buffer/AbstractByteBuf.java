@@ -72,7 +72,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     private int markedReaderIndex;
     private int markedWriterIndex;
     private int maxCapacity;
-
+    // 缓存了 maxCapacity
     protected AbstractByteBuf(int maxCapacity) {
         checkPositiveOrZero(maxCapacity, "maxCapacity");
         this.maxCapacity = maxCapacity;
@@ -1441,7 +1441,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
             throw new IllegalReferenceCountException(0);
         }
     }
-
+    // 设置读和写指针的值
     final void setIndex0(int readerIndex, int writerIndex) {
         this.readerIndex = readerIndex;
         this.writerIndex = writerIndex;

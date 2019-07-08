@@ -79,7 +79,7 @@ public final class PlatformDependent {
     private static final boolean MAYBE_SUPER_USER;
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
-
+    // 根据平台先查看获取 unsafe 是否有异常产生，再看能否获取 unsafe
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
     private static final boolean DIRECT_BUFFER_PREFERRED;
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
@@ -208,9 +208,9 @@ public final class PlatformDependent {
 
     /**
      * Returns {@code true} if and only if the current platform is Android
-     */
+     */ // 根据系统的 java.vm.name 属性值来确定是否是安卓平台
     public static boolean isAndroid() {
-        return PlatformDependent0.isAndroid();
+        return PlatformDependent0.isAndroid();  // 根据系统的 java.vm.name 属性值来确定是否是安卓平台
     }
 
     /**
@@ -252,7 +252,7 @@ public final class PlatformDependent {
     /**
      * Return {@code true} if {@code sun.misc.Unsafe} was found on the classpath and can be used for accelerated
      * direct memory access.
-     */
+     */ // 检查 classpath 中是否有 sun.misc.Unsafe，如果有就可以通过它来加速直接内存区域的访问速度（它是根据获取 unsafe 的过程是否有异常产生来判定的）
     public static boolean hasUnsafe() {
         return UNSAFE_UNAVAILABILITY_CAUSE == null;
     }
@@ -402,9 +402,9 @@ public final class PlatformDependent {
     public static void freeDirectBuffer(ByteBuffer buffer) {
         CLEANER.freeDirectBuffer(buffer);
     }
-
+    // 通过 jdk 原生 unsafe 获取 object 实例偏移量为 fieldOffset 的 field 的实际物理地址
     public static long directBufferAddress(ByteBuffer buffer) {
-        return PlatformDependent0.directBufferAddress(buffer);
+        return PlatformDependent0.directBufferAddress(buffer);  // 通过 jdk 原生 unsafe 获取 object 实例偏移量为 fieldOffset 的 field 的实际物理地址
     }
 
     public static ByteBuffer directBuffer(long memoryAddress, int size) {
@@ -947,19 +947,19 @@ public final class PlatformDependent {
         // Check for root and toor as some BSDs have a toor user that is basically the same as root.
         return "root".equals(username) || "toor".equals(username);
     }
-
+    // 根据平台先查看获取 unsafe 是否有异常产生，再看能否获取 unsafe
     private static Throwable unsafeUnavailabilityCause0() {
-        if (isAndroid()) {
-            logger.debug("sun.misc.Unsafe: unavailable (Android)");
+        if (isAndroid()) {  // 根据系统的 java.vm.name 属性值来确定是否是安卓平台
+            logger.debug("sun.misc.Unsafe: unavailable (Android)"); // 这里说明在安卓平台是无法获取到 UNSAFE 来加速内存访问的
             return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (Android)");
         }
-        Throwable cause = PlatformDependent0.getUnsafeUnavailabilityCause();
+        Throwable cause = PlatformDependent0.getUnsafeUnavailabilityCause();    // 获取 UNSAFE_UNAVAILABILITY_CAUSE，如果是安卓平台，这个值将不会为 null
         if (cause != null) {
             return cause;
         }
-
+        // 上两种情况都是无法获取 unsafe 的情况，下边是可能获取 unsafe 的情况
         try {
-            boolean hasUnsafe = PlatformDependent0.hasUnsafe();
+            boolean hasUnsafe = PlatformDependent0.hasUnsafe(); // 看系统获取到 unsafe 没有
             logger.debug("sun.misc.Unsafe: {}", hasUnsafe ? "available" : "unavailable");
             return hasUnsafe ? null : PlatformDependent0.getUnsafeUnavailabilityCause();
         } catch (Throwable t) {

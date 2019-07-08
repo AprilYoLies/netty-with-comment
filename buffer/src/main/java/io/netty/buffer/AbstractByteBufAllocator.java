@@ -133,9 +133,9 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         return heapBuffer(DEFAULT_INITIAL_CAPACITY);
     }
 
-    @Override
+    @Override   // 根据是否有 unsafe 来决定从 heap 或者是 direct 中获取 byte buf
     public ByteBuf ioBuffer(int initialCapacity) {
-        if (PlatformDependent.hasUnsafe()) {
+        if (PlatformDependent.hasUnsafe()) {    // 检查 classpath 中是否有 sun.misc.Unsafe，如果有就可以通过它来加速直接内存区域的访问速度（它是根据获取 unsafe 的过程是否有异常产生来判定的）
             return directBuffer(initialCapacity);
         }
         return heapBuffer(initialCapacity);
@@ -181,9 +181,9 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     @Override
     public ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
         if (initialCapacity == 0 && maxCapacity == 0) {
-            return emptyBuf;
+            return emptyBuf;    // 指定参数为 0，就返回一个空的 byte buf
         }
-        validate(initialCapacity, maxCapacity);
+        validate(initialCapacity, maxCapacity);  // 输入的参数必须是正数，且 initialCapacity 必须小于等于 maxCapacity
         return newDirectBuffer(initialCapacity, maxCapacity);
     }
 
@@ -222,9 +222,9 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     public CompositeByteBuf compositeDirectBuffer(int maxNumComponents) {
         return toLeakAwareBuffer(new CompositeByteBuf(this, true, maxNumComponents));
     }
-
+    // 输入的参数必须是正数，且 initialCapacity 必须小于等于 maxCapacity
     private static void validate(int initialCapacity, int maxCapacity) {
-        checkPositiveOrZero(initialCapacity, "initialCapacity");
+        checkPositiveOrZero(initialCapacity, "initialCapacity");    // 输入的参数必须是正数，且 initialCapacity 必须小于等于 maxCapacity
         if (initialCapacity > maxCapacity) {
             throw new IllegalArgumentException(String.format(
                     "initialCapacity: %d (expected: not greater than maxCapacity(%d)",

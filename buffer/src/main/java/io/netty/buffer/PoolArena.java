@@ -143,7 +143,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     abstract boolean isDirect();
 
     PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
-        PooledByteBuf<T> buf = newByteBuf(maxCapacity);
+        PooledByteBuf<T> buf = newByteBuf(maxCapacity); // 从 RECYCLER 中获取 PooledUnsafeDirectByteBuf，然后对其进行相关参数的设置，最后返回这个获得的 PooledUnsafeDirectByteBuf
         allocate(cache, buf, reqCapacity);
         return buf;
     }
@@ -780,10 +780,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 PlatformDependent.freeDirectBuffer(chunk.memory);
             }
         }
-
+        // 从 RECYCLER 中获取 PooledUnsafeDirectByteBuf，然后对其进行相关参数的设置，最后返回这个获得的 PooledUnsafeDirectByteBuf
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
-            if (HAS_UNSAFE) {
+            if (HAS_UNSAFE) {   // 从 RECYCLER 中获取 PooledUnsafeDirectByteBuf，然后对其进行相关参数的设置，最后返回这个获得的 PooledUnsafeDirectByteBuf
                 return PooledUnsafeDirectByteBuf.newInstance(maxCapacity);
             } else {
                 return PooledDirectByteBuf.newInstance(maxCapacity);

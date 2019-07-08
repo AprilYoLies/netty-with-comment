@@ -64,7 +64,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             assert eventLoop().inEventLoop();
             final ChannelConfig config = config();  // config
             final ChannelPipeline pipeline = pipeline();    // pipeline
-            final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();  // 获取 recvHandle，如果没有则进行创建
+            final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();  // 根据 RecvByteBufAllocator 的 minIndex, maxIndex, initial 构建 HandleImpl（缓存了 int minIndex, int maxIndex，同时根据 initial 大小求得对应的 SIZE_TABLE 索引值并缓存）
             allocHandle.reset(config);  // 缓存 config，恢复 maxMessagePerRead，totalMessages，totalBytesRead 参数
 
             boolean closed = false;
