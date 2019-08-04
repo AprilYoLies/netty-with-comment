@@ -37,7 +37,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         Small,
         Normal
     }
-
+    // tiny sub page 的数量
     static final int numTinySubpagePools = 512 >>> 4;
 
     final PooledByteBufAllocator parent;
@@ -82,42 +82,42 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
-
+    // 缓存了参数值，构建了 tinySubpagePools、smallSubpagePools 和 List<PoolChunkListMetric>，里边存放的 PoolChunkList 构成了双链表
     protected PoolArena(PooledByteBufAllocator parent, int pageSize,
           int maxOrder, int pageShifts, int chunkSize, int cacheAlignment) {
-        this.parent = parent;
-        this.pageSize = pageSize;
-        this.maxOrder = maxOrder;
-        this.pageShifts = pageShifts;
-        this.chunkSize = chunkSize;
+        this.parent = parent;   // parent 就是 PooledByteBufAllocator，也就是根据 PoolArena 能够知道是由哪个 PooledByteBufAllocator 分配的
+        this.pageSize = pageSize;   // 默认页大小
+        this.maxOrder = maxOrder;   // order
+        this.pageShifts = pageShifts;   // pageShifts
+        this.chunkSize = chunkSize; // chunk 大小
         directMemoryCacheAlignment = cacheAlignment;
         directMemoryCacheAlignmentMask = cacheAlignment - 1;
         subpageOverflowMask = ~(pageSize - 1);
-        tinySubpagePools = newSubpagePoolArray(numTinySubpagePools);
+        tinySubpagePools = newSubpagePoolArray(numTinySubpagePools);    // 创建一个参数长度的 PoolSubPage 数组
         for (int i = 0; i < tinySubpagePools.length; i ++) {
-            tinySubpagePools[i] = newSubpagePoolHead(pageSize);
+            tinySubpagePools[i] = newSubpagePoolHead(pageSize); // 说明 SubPagePool 元素是一个双链表结构
         }
-
+        // 计算 numSmallSubpagePools
         numSmallSubpagePools = pageShifts - 9;
-        smallSubpagePools = newSubpagePoolArray(numSmallSubpagePools);
+        smallSubpagePools = newSubpagePoolArray(numSmallSubpagePools);  // 同 tinySubPagePools 操作
         for (int i = 0; i < smallSubpagePools.length; i ++) {
-            smallSubpagePools[i] = newSubpagePoolHead(pageSize);
+            smallSubpagePools[i] = newSubpagePoolHead(pageSize);    // 说明 SubPagePool 元素是一个双链表结构
         }
-
+        // 缓存了参数值，根据 minUsage, chunkSize 计算了 maxCapacity，这里是 qInit -> q000 -> q025 -> q075 -> q100 构成链表
         q100 = new PoolChunkList<T>(this, null, 100, Integer.MAX_VALUE, chunkSize);
         q075 = new PoolChunkList<T>(this, q100, 75, 100, chunkSize);
         q050 = new PoolChunkList<T>(this, q075, 50, 100, chunkSize);
         q025 = new PoolChunkList<T>(this, q050, 25, 75, chunkSize);
         q000 = new PoolChunkList<T>(this, q025, 1, 50, chunkSize);
         qInit = new PoolChunkList<T>(this, q000, Integer.MIN_VALUE, 25, chunkSize);
-
+        // 构建链表
         q100.prevList(q075);
         q075.prevList(q050);
         q050.prevList(q025);
         q025.prevList(q000);
         q000.prevList(null);
         qInit.prevList(qInit);
-
+        // 将 PoolChunkList 添加到 metrics
         List<PoolChunkListMetric> metrics = new ArrayList<PoolChunkListMetric>(6);
         metrics.add(qInit);
         metrics.add(q000);
@@ -127,7 +127,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         metrics.add(q100);
         chunkListMetrics = Collections.unmodifiableList(metrics);
     }
-
+    // 说明 SubPagePool 元素是一个双链表结构
     private PoolSubpage<T> newSubpagePoolHead(int pageSize) {
         PoolSubpage<T> head = new PoolSubpage<T>(pageSize);
         head.prev = head;
@@ -135,7 +135,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         return head;
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked")  // 创建一个参数长度的 PoolSubPage 数组
     private PoolSubpage<T>[] newSubpagePoolArray(int size) {
         return new PoolSubpage[size];
     }
@@ -666,13 +666,13 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             chunkList.destroy(this);
         }
     }
-
+    // 缓存了参数值，构建了 tinySubpagePools、smallSubpagePools 和 List<PoolChunkListMetric>，里边存放的 PoolChunkList 构成了双链表
     static final class HeapArena extends PoolArena<byte[]> {
-
+        // 缓存了参数值，构建了 tinySubpagePools、smallSubpagePools 和 List<PoolChunkListMetric>，里边存放的 PoolChunkList 构成了双链表
         HeapArena(PooledByteBufAllocator parent, int pageSize, int maxOrder,
                 int pageShifts, int chunkSize, int directMemoryCacheAlignment) {
             super(parent, pageSize, maxOrder, pageShifts, chunkSize,
-                    directMemoryCacheAlignment);
+                    directMemoryCacheAlignment);    // 缓存了参数值，构建了 tinySubpagePools、smallSubpagePools 和 List<PoolChunkListMetric>，里边存放的 PoolChunkList 构成了双链表
         }
 
         private static byte[] newByteArray(int size) {

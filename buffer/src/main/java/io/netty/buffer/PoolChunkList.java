@@ -41,10 +41,10 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
-
+    // 缓存了参数值，根据 minUsage, chunkSize 计算了 maxCapacity
     PoolChunkList(PoolArena<T> arena, PoolChunkList<T> nextList, int minUsage, int maxUsage, int chunkSize) {
         assert minUsage <= maxUsage;
-        this.arena = arena;
+        this.arena = arena; // 也就是 PoolChunkList 可以定位它属于的 PoolArena
         this.nextList = nextList;
         this.minUsage = minUsage;
         this.maxUsage = maxUsage;

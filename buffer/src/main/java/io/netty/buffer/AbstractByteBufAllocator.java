@@ -95,7 +95,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
      *
      * @param preferDirect {@code true} if {@link #buffer(int)} should try to allocate a direct buffer rather than
      *                     a heap buffer
-     */
+     */ // 设置默认使用直接内存标志，初始化了 emptyBuf
     protected AbstractByteBufAllocator(boolean preferDirect) {
         directByDefault = preferDirect && PlatformDependent.hasUnsafe();
         emptyBuf = new EmptyByteBuf(this);
@@ -149,7 +149,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         return heapBuffer(initialCapacity, maxCapacity);
     }
 
-    @Override
+    @Override   // AbstractByteBufAllocator 用于分配堆上内存的入口方法
     public ByteBuf heapBuffer() {
         return heapBuffer(DEFAULT_INITIAL_CAPACITY, DEFAULT_MAX_CAPACITY);
     }
@@ -164,11 +164,11 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         if (initialCapacity == 0 && maxCapacity == 0) {
             return emptyBuf;
         }
-        validate(initialCapacity, maxCapacity);
-        return newHeapBuffer(initialCapacity, maxCapacity);
+        validate(initialCapacity, maxCapacity); // 输入的参数必须是正数，且 initialCapacity 必须小于等于 maxCapacity
+        return newHeapBuffer(initialCapacity, maxCapacity); // 该方法具体实现由子类决定
     }
 
-    @Override
+    @Override   // AbstractByteBufAllocator 用于分配直接内存的入口方法
     public ByteBuf directBuffer() {
         return directBuffer(DEFAULT_INITIAL_CAPACITY, DEFAULT_MAX_CAPACITY);
     }
