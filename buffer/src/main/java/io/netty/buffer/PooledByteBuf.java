@@ -41,27 +41,27 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         super(maxCapacity); // 缓存了 maxCapacity
         this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
     }
-
+    // 将参数的信息缓存到实例中
     void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
               long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
-        init0(chunk, nioBuffer, handle, offset, length, maxLength, cache);
+        init0(chunk, nioBuffer, handle, offset, length, maxLength, cache);  // 将参数的信息缓存到实例中
     }
 
     void initUnpooled(PoolChunk<T> chunk, int length) {
         init0(chunk, null, 0, chunk.offset, length, length, null);
     }
-
+    // 将参数的信息缓存到实例中
     private void init0(PoolChunk<T> chunk, ByteBuffer nioBuffer,
                        long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
         assert handle >= 0;
         assert chunk != null;
 
         this.chunk = chunk;
-        memory = chunk.memory;
+        memory = chunk.memory;  // 这就是 chunk 对应的那个字节数组
         tmpNioBuf = nioBuffer;
-        allocator = chunk.arena.parent;
-        this.cache = cache;
-        this.handle = handle;
+        allocator = chunk.arena.parent; // allocator 信息
+        this.cache = cache; // thread local 信息
+        this.handle = handle;   // handler 值，估计是直接内存值
         this.offset = offset;
         this.length = length;
         this.maxLength = maxLength;

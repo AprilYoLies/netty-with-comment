@@ -107,7 +107,7 @@ public abstract class Recycler<T> {
     private final int maxSharedCapacityFactor;
     private final int ratioMask;
     private final int maxDelayedQueuesPerThread;
-
+    // Recycler 中存放在线程本地变量中的 Stack，里边存放的是 DefaultHandle，它持有了 PooledUnsafeHeapByteBuf
     private final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
         @Override
         protected Stack<T> initialValue() {
@@ -151,17 +151,17 @@ public abstract class Recycler<T> {
             this.maxDelayedQueuesPerThread = max(0, maxDelayedQueuesPerThread);
         }
     }
-
+    // 从线程本地获取 stack，pop 出栈顶元素，类型为 DefaultHandle，如果为空就新建一个，然后设置它的 value 为新建的 PooledUnsafeDirectByteBuf，同时 DefaultHandle 的 value 就是 PooledUnsafeDirectByteBuf
     @SuppressWarnings("unchecked")
     public final T get() {  // 从线程本地获取 stack，pop 出栈顶元素，如果为空就新建一个，然后设置它的 value 为新建的 PooledUnsafeDirectByteBuf
         if (maxCapacityPerThread == 0) {    // 这里应该是线程不允许回收的情况
             return newObject((Handle<T>) NOOP_HANDLE);
         }
-        Stack<T> stack = threadLocal.get(); // 获取 threadLocal 的 index 对应的那个元素
+        Stack<T> stack = threadLocal.get(); // 获取 threadLocal 的 index 对应的那个元素，这里说明 Recycler 是通过线程本地变量来存储 Stack 的，而它里边又是存储的 DefaultHandle，它持有了我们想要的 PooledUnsafeDirectByteBuf
         DefaultHandle<T> handle = stack.pop();   // 获取栈顶元素，可能会涉及到元素转移的过程
-        if (handle == null) {
+        if (handle == null) {   // 这里说明 Stack 中存储的是 DefaultHandle
             handle = stack.newHandle(); // 新建 DefaultHandle
-            handle.value = newObject(handle);   // 新建了一个 PooledUnsafeDirectByteBuf
+            handle.value = newObject(handle);   // 新建了一个 PooledUnsafeDirectByteBuf，它持有了 DefaultHandle，同时 DefaultHandle 的 value 为新创建的 PooledUnsafeDirectByteBuf
         }
         return (T) handle.value;    // 返回新构建的那个 PooledUnsafeDirectByteBuf
     }

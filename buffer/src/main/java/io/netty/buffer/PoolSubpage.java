@@ -46,21 +46,21 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         this.pageSize = pageSize;
         bitmap = null;
     }
-
+    // 创建 PoolSubPage，将参数指定的信息进行缓存，完成当前实例的初始化，包括 doNotDestroy 状态，elemSize，maxNumElems，然后将当前实例追加到 head 节点后
     PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int memoryMapIdx, int runOffset, int pageSize, int elemSize) {
-        this.chunk = chunk;
-        this.memoryMapIdx = memoryMapIdx;
+        this.chunk = chunk; // 持有 chunk 信息
+        this.memoryMapIdx = memoryMapIdx;   // 缓存参数相关信息
         this.runOffset = runOffset;
         this.pageSize = pageSize;
         bitmap = new long[pageSize >>> 10]; // pageSize / 16 / 64
-        init(head, elemSize);
+        init(head, elemSize);   // 完成当前实例的初始化，包括 doNotDestroy 状态，elemSize，maxNumElems，然后将当前实例追加到 head 节点后
     }
-
+    // 完成当前实例的初始化，包括 doNotDestroy 状态，elemSize，maxNumElems，然后将当前实例追加到 head 节点后
     void init(PoolSubpage<T> head, int elemSize) {
         doNotDestroy = true;
-        this.elemSize = elemSize;
+        this.elemSize = elemSize;   // 缓存大小信息
         if (elemSize != 0) {
-            maxNumElems = numAvail = pageSize / elemSize;
+            maxNumElems = numAvail = pageSize / elemSize;   // 看 page 能存放多少个 elemSize 大小的元素
             nextAvail = 0;
             bitmapLength = maxNumElems >>> 6;
             if ((maxNumElems & 63) != 0) {
@@ -71,7 +71,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
                 bitmap[i] = 0;
             }
         }
-        addToPool(head);
+        addToPool(head);    // 将当前实例追加到 head 之后
     }
 
     /**
@@ -134,7 +134,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             return false;
         }
     }
-
+    // 将当前实例追加到 head 之后
     private void addToPool(PoolSubpage<T> head) {
         assert prev == null && next == null;
         prev = head;

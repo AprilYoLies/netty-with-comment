@@ -60,7 +60,7 @@ public final class ObjectUtil {
     /**
      * Checks that the given argument is positive or zero. If it is not , throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
-     */
+     */ // 检查参数是否为 0 或者正数
     public static int checkPositiveOrZero(int i, String name) {
         if (i < 0) {
             throw new IllegalArgumentException(name + ": " + i + " (expected: >= 0)");

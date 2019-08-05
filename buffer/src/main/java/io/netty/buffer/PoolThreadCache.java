@@ -63,25 +63,25 @@ final class PoolThreadCache {
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
-
+    // 以 directArena 为例，创建 tinySubPageDirectCaches、smallSubPageDirectCaches 以及 normalDirectCaches，更新缓存线程数
     PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
                     int tinyCacheSize, int smallCacheSize, int normalCacheSize,
                     int maxCachedBufferCapacity, int freeSweepAllocationThreshold) {
-        checkPositiveOrZero(maxCachedBufferCapacity, "maxCachedBufferCapacity");
-        this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
+        checkPositiveOrZero(maxCachedBufferCapacity, "maxCachedBufferCapacity");    // 检查参数是否为 0 或者正数
+        this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;   // 缓存了参数信息，关注 Arena
         this.heapArena = heapArena;
         this.directArena = directArena;
-        if (directArena != null) {
-            tinySubPageDirectCaches = createSubPageCaches(
-                    tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);
-            smallSubPageDirectCaches = createSubPageCaches(
-                    smallCacheSize, directArena.numSmallSubpagePools, SizeClass.Small);
+        if (directArena != null) {  // 对于堆内存区类型的 Arena 的处理方式
+            tinySubPageDirectCaches = createSubPageCaches(   // 创建了参数指定个 SubPageCache，由 MemoryRegionCache<T>[] 保存，完成初始化后返回
+                    tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);  // tiny 子页的数量为 32
+            smallSubPageDirectCaches = createSubPageCaches(  // 创建了参数指定个 SubPageCache，由 MemoryRegionCache<T>[] 保存，完成初始化后返回
+                    smallCacheSize, directArena.numSmallSubpagePools, SizeClass.Small); // small 子页的数量为 4
 
-            numShiftsNormalDirect = log2(directArena.pageSize);
-            normalDirectCaches = createNormalCaches(
+            numShiftsNormalDirect = log2(directArena.pageSize); // 求 pageSize 关于 2 的对数
+            normalDirectCaches = createNormalCaches(    // 创建了 MemoryRegionCache<T>[]，长度根据参数计算得到，完成初始化后返回
                     normalCacheSize, maxCachedBufferCapacity, directArena);
 
-            directArena.numThreadCaches.getAndIncrement();
+            directArena.numThreadCaches.getAndIncrement();  // 记录缓存的线程数
         } else {
             // No directArea is configured so just null out all caches
             tinySubPageDirectCaches = null;
@@ -89,15 +89,15 @@ final class PoolThreadCache {
             normalDirectCaches = null;
             numShiftsNormalDirect = -1;
         }
-        if (heapArena != null) {
+        if (heapArena != null) {    // 同上
             // Create the caches for the heap allocations
-            tinySubPageHeapCaches = createSubPageCaches(
+            tinySubPageHeapCaches = createSubPageCaches(    // 同上
                     tinyCacheSize, PoolArena.numTinySubpagePools, SizeClass.Tiny);
-            smallSubPageHeapCaches = createSubPageCaches(
+            smallSubPageHeapCaches = createSubPageCaches(   // 同上
                     smallCacheSize, heapArena.numSmallSubpagePools, SizeClass.Small);
 
             numShiftsNormalHeap = log2(heapArena.pageSize);
-            normalHeapCaches = createNormalCaches(
+            normalHeapCaches = createNormalCaches(  // 同上
                     normalCacheSize, maxCachedBufferCapacity, heapArena);
 
             heapArena.numThreadCaches.getAndIncrement();
@@ -117,22 +117,22 @@ final class PoolThreadCache {
                     + freeSweepAllocationThreshold + " (expected: > 0)");
         }
     }
-
+    // 创建了参数指定个 SubPageCache，由 MemoryRegionCache<T>[] 保存，完成初始化后返回
     private static <T> MemoryRegionCache<T>[] createSubPageCaches(
             int cacheSize, int numCaches, SizeClass sizeClass) {
         if (cacheSize > 0 && numCaches > 0) {
             @SuppressWarnings("unchecked")
-            MemoryRegionCache<T>[] cache = new MemoryRegionCache[numCaches];
+            MemoryRegionCache<T>[] cache = new MemoryRegionCache[numCaches];    // tiny 子页缓存由 cache 保存
             for (int i = 0; i < cache.length; i++) {
                 // TODO: maybe use cacheSize / cache.length
-                cache[i] = new SubPageMemoryRegionCache<T>(cacheSize, sizeClass);
+                cache[i] = new SubPageMemoryRegionCache<T>(cacheSize, sizeClass);   // 标准化 size，创建了一个多生产者，单消费者队列，缓存了 sizeClass
             }
             return cache;
         } else {
             return null;
         }
     }
-
+    // 创建了 MemoryRegionCache<T>[]，长度根据参数计算得到，完成初始化后返回
     private static <T> MemoryRegionCache<T>[] createNormalCaches(
             int cacheSize, int maxCachedBufferCapacity, PoolArena<T> area) {
         if (cacheSize > 0 && maxCachedBufferCapacity > 0) {
@@ -142,7 +142,7 @@ final class PoolThreadCache {
             @SuppressWarnings("unchecked")
             MemoryRegionCache<T>[] cache = new MemoryRegionCache[arraySize];
             for (int i = 0; i < cache.length; i++) {
-                cache[i] = new NormalMemoryRegionCache<T>(cacheSize);
+                cache[i] = new NormalMemoryRegionCache<T>(cacheSize);   // 标准化 size，创建了一个多生产者，单消费者队列，缓存了 sizeClass
             }
             return cache;
         } else {
@@ -161,9 +161,9 @@ final class PoolThreadCache {
 
     /**
      * Try to allocate a tiny buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
-     */
+     */ // 进行内存分配，返回分配结果
     boolean allocateTiny(PoolArena<?> area, PooledByteBuf<?> buf, int reqCapacity, int normCapacity) {
-        return allocate(cacheForTiny(area, normCapacity), buf, reqCapacity);
+        return allocate(cacheForTiny(area, normCapacity), buf, reqCapacity);    // cacheForTiny 方法根据 normCapacity 计算出 idx，从 tinySubPageHeapCaches 中获取 idx 对应的元素
     }
 
     /**
@@ -180,14 +180,14 @@ final class PoolThreadCache {
         return allocate(cacheForNormal(area, normCapacity), buf, reqCapacity);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({ "unchecked", "rawtypes" })  // 进行内存分配，返回分配结果
     private boolean allocate(MemoryRegionCache<?> cache, PooledByteBuf buf, int reqCapacity) {
         if (cache == null) {
             // no cache found so just return false here
             return false;
         }
         boolean allocated = cache.allocate(buf, reqCapacity);
-        if (++ allocations >= freeSweepAllocationThreshold) {
+        if (++ allocations >= freeSweepAllocationThreshold) {   // 分配次数超过门限
             allocations = 0;
             trim();
         }
@@ -303,13 +303,13 @@ final class PoolThreadCache {
         }
         cache.trim();
     }
-
+    // 根据 normCapacity 计算出 idx，从 tinySubPageHeapCaches 中获取 idx 对应的元素
     private MemoryRegionCache<?> cacheForTiny(PoolArena<?> area, int normCapacity) {
-        int idx = PoolArena.tinyIdx(normCapacity);
-        if (area.isDirect()) {
+        int idx = PoolArena.tinyIdx(normCapacity);  // tiny 索引？？ normCapacity >>> 4
+        if (area.isDirect()) {  // 直接内存类型的 area 的处理方式
             return cache(tinySubPageDirectCaches, idx);
-        }
-        return cache(tinySubPageHeapCaches, idx);
+        }    // 堆上内存类型的 area 的处理方式
+        return cache(tinySubPageHeapCaches, idx);   // 根据 idx 拿到 tinySubPageHeapCaches 的第 idx 个元素
     }
 
     private MemoryRegionCache<?> cacheForSmall(PoolArena<?> area, int normCapacity) {
@@ -328,7 +328,7 @@ final class PoolThreadCache {
         int idx = log2(normCapacity >> numShiftsNormalHeap);
         return cache(normalHeapCaches, idx);
     }
-
+    // 根据 idx 拿到 tinySubPageHeapCaches 的第 idx 个元素
     private static <T> MemoryRegionCache<T> cache(MemoryRegionCache<T>[] cache, int idx) {
         if (cache == null || idx > cache.length - 1) {
             return null;
@@ -338,10 +338,10 @@ final class PoolThreadCache {
 
     /**
      * Cache used for buffers which are backed by TINY or SMALL size.
-     */
+     */ // 标准化 size，创建了一个多生产者，单消费者队列，缓存了 sizeClass
     private static final class SubPageMemoryRegionCache<T> extends MemoryRegionCache<T> {
         SubPageMemoryRegionCache(int size, SizeClass sizeClass) {
-            super(size, sizeClass);
+            super(size, sizeClass); // 标准化 size，创建了一个多生产者，单消费者队列，缓存了 sizeClass
         }
 
         @Override
@@ -353,10 +353,10 @@ final class PoolThreadCache {
 
     /**
      * Cache used for buffers which are backed by NORMAL size.
-     */
+     */ // 标准化 size，创建了一个多生产者，单消费者队列，缓存了 sizeClass
     private static final class NormalMemoryRegionCache<T> extends MemoryRegionCache<T> {
         NormalMemoryRegionCache(int size) {
-            super(size, SizeClass.Normal);
+            super(size, SizeClass.Normal);  // 标准化 size，创建了一个多生产者，单消费者队列，缓存了 sizeClass
         }
 
         @Override
@@ -371,10 +371,10 @@ final class PoolThreadCache {
         private final Queue<Entry<T>> queue;
         private final SizeClass sizeClass;
         private int allocations;
-
+        // 标准化 size，创建了一个多生产者，单消费者队列，缓存了 sizeClass
         MemoryRegionCache(int size, SizeClass sizeClass) {
-            this.size = MathUtil.safeFindNextPositivePowerOfTwo(size);
-            queue = PlatformDependent.newFixedMpscQueue(this.size);
+            this.size = MathUtil.safeFindNextPositivePowerOfTwo(size);  // 空间大小为大于等于参数的最小 2 的幂级数
+            queue = PlatformDependent.newFixedMpscQueue(this.size); // 创建了一个多生产者，单消费者队列
             this.sizeClass = sizeClass;
         }
 
@@ -403,7 +403,7 @@ final class PoolThreadCache {
          * Allocate something out of the cache if possible and remove the entry from the cache.
          */
         public final boolean allocate(PooledByteBuf<T> buf, int reqCapacity) {
-            Entry<T> entry = queue.poll();
+            Entry<T> entry = queue.poll();  // 从当前 MemoryRegionCache 实例的 queue 中获取 Entry
             if (entry == null) {
                 return false;
             }
@@ -491,7 +491,7 @@ final class PoolThreadCache {
             return entry;
         }
 
-        @SuppressWarnings("rawtypes")
+        @SuppressWarnings("rawtypes")   // 该 RECYCLER 中存储的就是 Entry 了
         private static final Recycler<Entry> RECYCLER = new Recycler<Entry>() {
             @SuppressWarnings("unchecked")
             @Override

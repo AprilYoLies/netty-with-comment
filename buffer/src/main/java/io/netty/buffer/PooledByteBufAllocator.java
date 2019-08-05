@@ -317,13 +317,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        PoolThreadCache cache = threadCache.get();  // 优先获取线程本地变量中的 PoolThreadCache
-        PoolArena<byte[]> heapArena = cache.heapArena;
+        PoolThreadCache cache = threadCache.get();  // 优先获取线程本地变量中的 PoolThreadCache，没有的话就会使用初始值
+        PoolArena<byte[]> heapArena = cache.heapArena;  // 拿到 PoolThreadCache 中的 PoolArena<byte[]>
 
         final ByteBuf buf;
         if (heapArena != null) {
             buf = heapArena.allocate(cache, initialCapacity, maxCapacity);
-        } else {
+        } else {    // 这里选择的是直接进行内存分配，而不是从池中获取
             buf = PlatformDependent.hasUnsafe() ?
                     new UnpooledUnsafeHeapByteBuf(this, initialCapacity, maxCapacity) :
                     new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
@@ -456,10 +456,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             final Thread current = Thread.currentThread();
             if (useCacheForAllThreads || current instanceof FastThreadLocalThread) {
                 final PoolThreadCache cache = new PoolThreadCache(  // 构建线程池化缓存
-                        heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize,
+                        heapArena, directArena, tinyCacheSize, smallCacheSize, normalCacheSize, // 这里说明每一个 PoolThreadCache 持有了一对 Arena
                         DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
 
-                if (DEFAULT_CACHE_TRIM_INTERVAL_MILLIS > 0) {
+                if (DEFAULT_CACHE_TRIM_INTERVAL_MILLIS > 0) {   // 这里是设置了一个缓存修剪任务
                     final EventExecutor executor = ThreadExecutorMap.currentExecutor();
                     if (executor != null) {
                         executor.scheduleAtFixedRate(trimTask, DEFAULT_CACHE_TRIM_INTERVAL_MILLIS,

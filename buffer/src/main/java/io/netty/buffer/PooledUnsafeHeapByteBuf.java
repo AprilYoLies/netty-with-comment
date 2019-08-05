@@ -22,15 +22,15 @@ import io.netty.util.internal.PlatformDependent;
 final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
 
     private static final Recycler<PooledUnsafeHeapByteBuf> RECYCLER = new Recycler<PooledUnsafeHeapByteBuf>() {
-        @Override
+        @Override   // 通过 DefaultHandle 构建 PooledUnsafeHeapByteBuf，它持有了 DefaultHandle
         protected PooledUnsafeHeapByteBuf newObject(Handle<PooledUnsafeHeapByteBuf> handle) {
             return new PooledUnsafeHeapByteBuf(handle, 0);
         }
     };
-
+    // 通过 RECYCLER 从线程本地获取 stack，pop 出栈顶元素，类型为 DefaultHandle，如果为空就新建一个，然后设置它的 value 为新建的 PooledUnsafeDirectByteBuf，同时 DefaultHandle 的 value 就是 PooledUnsafeDirectByteBuf
     static PooledUnsafeHeapByteBuf newUnsafeInstance(int maxCapacity) {
-        PooledUnsafeHeapByteBuf buf = RECYCLER.get();
-        buf.reuse(maxCapacity);
+        PooledUnsafeHeapByteBuf buf = RECYCLER.get();   // 从线程本地获取 stack，pop 出栈顶元素，类型为 DefaultHandle，如果为空就新建一个，然后设置它的 value 为新建的 PooledUnsafeDirectByteBuf，同时 DefaultHandle 的 value 就是 PooledUnsafeDirectByteBuf
+        buf.reuse(maxCapacity); // 将 byte buf 相关的参数置零
         return buf;
     }
 

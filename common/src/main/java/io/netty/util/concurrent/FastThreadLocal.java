@@ -174,7 +174,7 @@ public class FastThreadLocal<V> {
     private V initialize(InternalThreadLocalMap threadLocalMap) {
         V v = null;
         try {
-            v = initialValue(); // 获取初始值
+            v = initialValue(); // 获取 leastUsedArena，根据获得的 arena 和 allocator 的相关参数构建 PoolThreadCache 返回
         } catch (Exception e) {
             PlatformDependent.throwException(e);
         }

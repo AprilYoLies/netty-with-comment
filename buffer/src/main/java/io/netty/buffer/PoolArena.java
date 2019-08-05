@@ -139,15 +139,15 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private PoolSubpage<T>[] newSubpagePoolArray(int size) {
         return new PoolSubpage[size];
     }
-
     abstract boolean isDirect();
-
+    // 通过 normCapacity 计算 tableIdx，然后获取 SubPagePools 对应位置的元素 PoolSubPage，如果它不是头结点，那么就通过它为 PooledByteBuf 分配空间，否则
+    // 优先通过 chunk list 进行分配，没有的话，就会新建 PoolChunk（重点创建了 memoryMap、depthMap 并填充了初始值，PoolChunk 持有了真正的字节数组），通过新建的 PoolChunk 为 PooledByteBuf 分配空间，然后将 PoolChunk 追加到对应的 PoolChunkList 中
     PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
         PooledByteBuf<T> buf = newByteBuf(maxCapacity); // 从 RECYCLER 中获取 PooledUnsafeDirectByteBuf，然后对其进行相关参数的设置，最后返回这个获得的 PooledUnsafeDirectByteBuf
         allocate(cache, buf, reqCapacity);
         return buf;
     }
-
+    // tiny 索引？？ normCapacity >>> 4
     static int tinyIdx(int normCapacity) {
         return normCapacity >>> 4;
     }
@@ -166,25 +166,25 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     boolean isTinyOrSmall(int normCapacity) {
         return (normCapacity & subpageOverflowMask) == 0;
     }
-
     // normCapacity < 512
     static boolean isTiny(int normCapacity) {
         return (normCapacity & 0xFFFFFE00) == 0;
     }
-
+    // 通过 normCapacity 计算 tableIdx，然后获取 SubPagePools 对应位置的元素 PoolSubPage，如果它不是头结点，那么就通过它为 PooledByteBuf 分配空间，否则
+    // 优先通过 chunk list 进行分配，没有的话，就会新建 PoolChunk（重点创建了 memoryMap、depthMap 并填充了初始值，PoolChunk 持有了真正的字节数组），通过新建的 PoolChunk 为 PooledByteBuf 分配空间，然后将 PoolChunk 追加到对应的 PoolChunkList 中
     private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
-        final int normCapacity = normalizeCapacity(reqCapacity);
-        if (isTinyOrSmall(normCapacity)) { // capacity < pageSize
+        final int normCapacity = normalizeCapacity(reqCapacity);    // 标准化容量值
+        if (isTinyOrSmall(normCapacity)) { // capacity < pageSize   // 是 tiny 或者 small 大小
             int tableIdx;
             PoolSubpage<T>[] table;
             boolean tiny = isTiny(normCapacity);
-            if (tiny) { // < 512
-                if (cache.allocateTiny(this, buf, reqCapacity, normCapacity)) {
+            if (tiny) { // < 512    // 对于 tiny 空间的处理
+                if (cache.allocateTiny(this, buf, reqCapacity, normCapacity)) { // 进行内存分配，返回分配结果
                     // was able to allocate out of the cache so move on
                     return;
                 }
-                tableIdx = tinyIdx(normCapacity);
-                table = tinySubpagePools;
+                tableIdx = tinyIdx(normCapacity);   // 根据 normCapacity 计算表索引
+                table = tinySubpagePools;   // 拿到 tiny 子页池对象
             } else {
                 if (cache.allocateSmall(this, buf, reqCapacity, normCapacity)) {
                     // was able to allocate out of the cache so move on
@@ -194,7 +194,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 table = smallSubpagePools;
             }
 
-            final PoolSubpage<T> head = table[tableIdx];
+            final PoolSubpage<T> head = table[tableIdx];    // 拿到 tableIdx 对应的 PoolSubpage
 
             /**
              * Synchronize on the head. This is needed as {@link PoolChunk#allocateSubpage(int)} and
@@ -202,7 +202,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
              */
             synchronized (head) {
                 final PoolSubpage<T> s = head.next;
-                if (s != head) {
+                if (s != head) {    // 链表不止一个元素
                     assert s.doNotDestroy && s.elemSize == normCapacity;
                     long handle = s.allocate();
                     assert handle >= 0;
@@ -211,10 +211,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     return;
                 }
             }
-            synchronized (this) {
+            synchronized (this) {   // 优先通过 chunk list 进行分配，没有的话，就会新建 PoolChunk（重点创建了 memoryMap、depthMap 并填充了初始值，PoolChunk 持有了真正的字节数组），通过新建的 PoolChunk 为 PooledByteBuf 分配空间，然后将 PoolChunk 追加到对应的 PoolChunkList 中
                 allocateNormal(buf, reqCapacity, normCapacity);
             }
-
+            // 更新相应的 allocations 值
             incTinySmallAllocation(tiny);
             return;
         }
@@ -232,22 +232,22 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             allocateHuge(buf, reqCapacity);
         }
     }
-
+    // 优先通过 chunk list 进行分配，没有的话，就会新建 PoolChunk（重点创建了 memoryMap、depthMap 并填充了初始值，PoolChunk 持有了真正的字节数组），通过新建的 PoolChunk 为 PooledByteBuf 分配空间，然后将 PoolChunk 追加到对应的 PoolChunkList 中
     // Method must be called inside synchronized(this) { ... } block
     private void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
-        if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
+        if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||   // 优先通过 chunk list 进行分配
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
             q075.allocate(buf, reqCapacity, normCapacity)) {
             return;
         }
 
-        // Add a new chunk.
+        // Add a new chunk.创建 PoolChunk 缓存了参数信息，重点创建了 memoryMap、depthMap 并填充了初始值，PoolChunk 持有了真正的字节数组
         PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
-        boolean success = c.allocate(buf, reqCapacity, normCapacity);
+        boolean success = c.allocate(buf, reqCapacity, normCapacity);   // 拿到 arena 实例的 SubpagePoolHead，根据参数计算 idx，获取到 PoolChunk 的 subpages 中 idx 对应的元素，如果为空就新建一个，然后将其追加到 SubpagePoolHead 之后，返回分配结果 handler，根据此完成对于 PooledByteBuf 的初始化
         assert success;
-        qInit.add(c);
+        qInit.add(c);   // 根据使用情况，将 chunk 追加到对应的 PoolChunkList 中
     }
-
+    // 更新相应的 allocations 值
     private void incTinySmallAllocation(boolean tiny) {
         if (tiny) {
             allocationsTiny.increment();
@@ -314,7 +314,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             destroyChunk(chunk);
         }
     }
-
+    // 根据 elemSize 计算 idx，然后拿到 SubpagePools 对应的元素
     PoolSubpage<T> findSubpagePoolHead(int elemSize) {
         int tableIdx;
         PoolSubpage<T>[] table;
@@ -684,10 +684,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             return false;
         }
 
-        @Override
+        @Override   // 创建 PoolChunk 缓存了参数信息，重点创建了 memoryMap、depthMap 并填充了初始值，PoolChunk 持有了真正的字节数组
         protected PoolChunk<byte[]> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             return new PoolChunk<byte[]>(this, newByteArray(chunkSize), pageSize, maxOrder, pageShifts, chunkSize, 0);
-        }
+        }   // 创建 PoolChunk 缓存了参数信息，重点创建了 memoryMap、depthMap 并填充了初始值
 
         @Override
         protected PoolChunk<byte[]> newUnpooledChunk(int capacity) {
@@ -698,7 +698,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         protected void destroyChunk(PoolChunk<byte[]> chunk) {
             // Rely on GC.
         }
-
+        // 通过 RECYCLER 从线程本地获取 stack，pop 出栈顶元素，类型为 DefaultHandle，如果为空就新建一个，然后设置它的 value 为新建的 PooledUnsafeDirectByteBuf，同时 DefaultHandle 的 value 就是 PooledUnsafeDirectByteBuf
         @Override
         protected PooledByteBuf<byte[]> newByteBuf(int maxCapacity) {
             return HAS_UNSAFE ? PooledUnsafeHeapByteBuf.newUnsafeInstance(maxCapacity)
