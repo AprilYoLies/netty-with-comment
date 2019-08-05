@@ -62,8 +62,8 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         allocator = chunk.arena.parent; // allocator 信息
         this.cache = cache; // thread local 信息
         this.handle = handle;   // handler 值，估计是直接内存值
-        this.offset = offset;
-        this.length = length;
+        this.offset = offset;   // 偏移量
+        this.length = length;   // 可用长度
         this.maxLength = maxLength;
     }
 

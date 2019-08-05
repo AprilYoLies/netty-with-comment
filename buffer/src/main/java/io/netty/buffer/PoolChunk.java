@@ -225,7 +225,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         final long handle;
         if ((normCapacity & subpageOverflowMask) != 0) { // >= pageSize
-            handle =  allocateRun(normCapacity);    // 要分配的容量超过 subpage 的分配方式
+            handle =  allocateRun(normCapacity);    // 要分配的容量超过 subpage 的分配方式，计算分配深度，通过它来得到对应的 memoryMap 索引位置，然后更新剩余字节数量
         } else {    // 拿到 arena 实例的 SubpagePoolHead，根据参数计算 idx，获取到 PoolChunk 的 subpages 中 idx 对应的元素，如果为空就新建一个，然后将其追加到 SubpagePoolHead 之后，返回分配结果
             handle = allocateSubpage(normCapacity);
         }
@@ -245,7 +245,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
      * The minimal depth at which subtree rooted at id has some free space
      *
      * @param id id
-     */ // 将 memoryMap id 对应位置的值设置为 val
+     */ // 将 memoryMap id 对应位置的值设置为 val，其实就是设置父节点的状态为已使用
     private void updateParentsAlloc(int id) {
         while (id > 1) {
             int parentId = id >>> 1;
@@ -318,14 +318,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
      *
      * @param normCapacity normalized capacity
      * @return index in memoryMap
-     */
+     */ // 计算分配深度，通过它来得到对应的 memoryMap 索引位置，然后更新剩余字节数量
     private long allocateRun(int normCapacity) {
-        int d = maxOrder - (log2(normCapacity) - pageShifts);
-        int id = allocateNode(d);
+        int d = maxOrder - (log2(normCapacity) - pageShifts);   // 计算得到分配深度
+        int id = allocateNode(d);   // 根据深度 d 计算 memoryMap 对应的索引值
         if (id < 0) {
             return id;
         }
-        freeBytes -= runLength(id);
+        freeBytes -= runLength(id); // 计算剩余量
         return id;
     }
 
@@ -350,7 +350,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             final PoolSubpage<T>[] subpages = this.subpages;    // chunk 对应的 sub page
             final int pageSize = this.pageSize;
 
-            freeBytes -= pageSize;  // 更新空闲空间大小
+            freeBytes -= pageSize;  // 更新空闲空间大小，因为是创建 subpages 直接就是使用一个 page 页面，为 8192 大小
 
             int subpageIdx = subpageIdx(id);    // 根据 id 计算 sub page 索引值
             PoolSubpage<T> subpage = subpages[subpageIdx];  // 拿到 PoolSubpage
@@ -448,12 +448,12 @@ final class PoolChunk<T> implements PoolChunkMetric {
         // compute the (0-based, with lsb = 0) position of highest set bit i.e, log2
         return INTEGER_SIZE_MINUS_ONE - Integer.numberOfLeadingZeros(val);
     }
-
+    // 计算使用长度
     private int runLength(int id) {
         // represents the size in #bytes supported by node 'id' in the tree
         return 1 << log2ChunkSize - depth(id);
     }
-
+    // 计算偏移量
     private int runOffset(int id) {
         // represents the 0-based offset in #bytes from start of the byte-array chunk
         int shift = id ^ 1 << depth(id);

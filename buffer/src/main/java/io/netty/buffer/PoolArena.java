@@ -218,12 +218,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             incTinySmallAllocation(tiny);
             return;
         }
-        if (normCapacity <= chunkSize) {
-            if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {
+        if (normCapacity <= chunkSize) {    // 从 PoolThreadCache 中获取 MemoryRegionCache，如果其 stack 中的元素不为空，那么就尝试进行内存分配
+            if (cache.allocateNormal(this, buf, reqCapacity, normCapacity)) {   // 这里是尝试通过 cache 进行内存分配
                 // was able to allocate out of the cache so move on
                 return;
             }
-            synchronized (this) {
+            synchronized (this) {   // 这里是通过 Arena 进行内存分配，因为缓存未命中
                 allocateNormal(buf, reqCapacity, normCapacity);
                 ++allocationsNormal;
             }

@@ -12,6 +12,7 @@ import org.junit.Test;
 public class CommonTest {
     @Test
     public void pooledByteBufAllocatorTest() {
+        int pageSize = 8192;
         PooledByteBufAllocator allocator = new PooledByteBufAllocator();
         ByteBuf byteBuf = allocator.heapBuffer();
     }

@@ -175,17 +175,17 @@ final class PoolThreadCache {
 
     /**
      * Try to allocate a small buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
-     */
+     */ // 从 PoolThreadCache 中获取 MemoryRegionCache，如果其 stack 中的元素不为空，那么就尝试进行内存分配
     boolean allocateNormal(PoolArena<?> area, PooledByteBuf<?> buf, int reqCapacity, int normCapacity) {
         return allocate(cacheForNormal(area, normCapacity), buf, reqCapacity);
-    }
+    }   // cacheForNormal 得到 PoolThreadCache 中 normalHeapCaches 相应的 MemoryRegionCache
 
     @SuppressWarnings({ "unchecked", "rawtypes" })  // 进行内存分配，返回分配结果
     private boolean allocate(MemoryRegionCache<?> cache, PooledByteBuf buf, int reqCapacity) {
         if (cache == null) {
             // no cache found so just return false here
             return false;
-        }
+        }   // 这里是尝试通过 cache 进行缓存分配
         boolean allocated = cache.allocate(buf, reqCapacity);
         if (++ allocations >= freeSweepAllocationThreshold) {   // 分配次数超过门限
             allocations = 0;
@@ -311,7 +311,7 @@ final class PoolThreadCache {
         }    // 堆上内存类型的 area 的处理方式
         return cache(tinySubPageHeapCaches, idx);   // 根据 idx 拿到 tinySubPageHeapCaches 的第 idx 个元素
     }
-
+    // 得到 PoolThreadCache 中相应的 MemoryRegionCache
     private MemoryRegionCache<?> cacheForSmall(PoolArena<?> area, int normCapacity) {
         int idx = PoolArena.smallIdx(normCapacity);
         if (area.isDirect()) {
@@ -319,14 +319,14 @@ final class PoolThreadCache {
         }
         return cache(smallSubPageHeapCaches, idx);
     }
-
+    // 得到 PoolThreadCache 中 normalHeapCaches 相应的 MemoryRegionCache
     private MemoryRegionCache<?> cacheForNormal(PoolArena<?> area, int normCapacity) {
         if (area.isDirect()) {
             int idx = log2(normCapacity >> numShiftsNormalDirect);
             return cache(normalDirectCaches, idx);
         }
         int idx = log2(normCapacity >> numShiftsNormalHeap);
-        return cache(normalHeapCaches, idx);
+        return cache(normalHeapCaches, idx);    // 获取 normalHeapCaches 中第 idx 号元素
     }
     // 根据 idx 拿到 tinySubPageHeapCaches 的第 idx 个元素
     private static <T> MemoryRegionCache<T> cache(MemoryRegionCache<T>[] cache, int idx) {
