@@ -1,6 +1,5 @@
-package top.aprilyolies.example.bufalloc;
+package top.aprilyolies.example.common;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
