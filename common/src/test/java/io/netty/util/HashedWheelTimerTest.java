@@ -33,16 +33,16 @@ public class HashedWheelTimerTest {
 
     @Test
     public void testScheduleTimeoutShouldNotRunBeforeDelay() throws InterruptedException {
-        final Timer timer = new HashedWheelTimer();
+        final Timer timer = new HashedWheelTimer(); // 这里说明 tickDuration 为 100ms，时间轮为 512 个槽，大致就是创建了 512 个时间槽，已经任务执行线程
         final CountDownLatch barrier = new CountDownLatch(1);
-        final Timeout timeout = timer.newTimeout(new TimerTask() {
+        final Timeout timeout = timer.newTimeout(new TimerTask() {  // 如果工作线程没有启动，就会启动工作线程，然后将任务封装为 HashedWheelTimeout，追加到 timeouts 队列中
             @Override
             public void run(Timeout timeout) throws Exception {
                 fail("This should not have run");
                 barrier.countDown();
             }
-        }, 10, TimeUnit.SECONDS);
-        assertFalse(barrier.await(3, TimeUnit.SECONDS));
+        }, 3, TimeUnit.SECONDS);
+        assertFalse(barrier.await(2, TimeUnit.SECONDS));
         assertFalse("timer should not expire", timeout.isExpired());
         timer.stop();
     }

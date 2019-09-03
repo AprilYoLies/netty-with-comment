@@ -23,6 +23,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 
 /**
  * @author lilinfeng
@@ -55,6 +56,7 @@ public class TimeServer {
         @Override
         protected void initChannel(SocketChannel ch) {
             ch.pipeline().addLast(new TimeServerHandler());
+            ch.pipeline().addLast(new IdleStateHandler(5, 10, 12)); // 无特殊作用，用于分析 IdleStateHandler 的实现
         }
 
     }
